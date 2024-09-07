@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef WCD934X_H
 #define WCD934X_H
@@ -129,6 +130,8 @@ struct tavil_reg_mask_val {
 #if IS_ENABLED(CONFIG_SND_SOC_WCD934X)
 extern void *tavil_get_afe_config(struct snd_soc_component *component,
 				  enum afe_config_type config_type);
+extern int tavil_set_port_map(struct snd_soc_component *component,
+					u32 size, void *data);
 extern int tavil_cdc_mclk_enable(struct snd_soc_component *component,
 				 bool enable);
 extern int tavil_cdc_mclk_tx_enable(struct snd_soc_component *component,
@@ -158,6 +161,11 @@ extern void *tavil_get_afe_config(struct snd_soc_component *component,
 				  enum afe_config_type config_type)
 {
 	return NULL;
+}
+extern int tavil_set_port_map(struct snd_soc_component *component,
+					u32 size, void *data)
+{
+	return 0;
 }
 extern int tavil_cdc_mclk_enable(struct snd_soc_component *component,
 				 bool enable)

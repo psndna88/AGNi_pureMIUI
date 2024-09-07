@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/init.h>
@@ -21,6 +22,7 @@
 #include <linux/spi/spi.h>
 #include <linux/regulator/consumer.h>
 #include <audio/linux/mfd/wcd9xxx/wcd9xxx_registers.h>
+#include <soc/swr-common.h>
 #include <soc/swr-wcd.h>
 #include <soc/snd_event.h>
 #include <sound/pcm.h>
@@ -500,6 +502,7 @@ struct wcd_swr_ctrl_platform_data {
 	int (*write)(void *handle, int reg, int val);
 	int (*bulk_write)(void *handle, u32 *reg, u32 *val, size_t len);
 	int (*clk)(void *handle, bool enable);
+	int (*core_vote)(void *handle, bool enable);
 	int (*handle_irq)(void *handle,
 			  irqreturn_t (*swrm_irq_handler)(int irq, void *data),
 			  void *swrm_handle, int action);
@@ -747,6 +750,34 @@ void *tavil_get_afe_config(struct snd_soc_component *component,
 	}
 }
 EXPORT_SYMBOL(tavil_get_afe_config);
+
+int tavil_set_port_map(struct snd_soc_component *component,
+			u32 size, void *data)
+{
+
+	struct swr_mstr_port_map *map = NULL;
+	struct swrm_port_config port_cfg;
+	struct tavil_priv *priv = NULL;
+
+	if (!component || (size == 0) || !data)
+		return -EINVAL;
+
+	priv = snd_soc_component_get_drvdata(component);
+
+	map = (struct swr_mstr_port_map *)data;
+
+	port_cfg.uc = map->uc;
+	port_cfg.size = SWR_MSTR_PORT_LEN;
+	port_cfg.params = map->swr_port_params;
+
+
+	swrm_wcd_notify(
+		priv->swr.ctrl_data[0].swr_pdev,
+		SWR_SET_PORT_MAP, &port_cfg);
+
+	return 0;
+}
+EXPORT_SYMBOL(tavil_set_port_map);
 
 static bool is_tavil_playback_dai(int dai_id)
 {
@@ -7804,9 +7835,11 @@ static const struct snd_kcontrol_new lo2_mixer[] = {
 };
 
 static const struct snd_soc_dapm_widget tavil_dapm_slim_widgets[] = {
-	SND_SOC_DAPM_AIF_IN_E("AIF4 PB", "AIF4 Playback", 0, SND_SOC_NOPM,
-			      AIF4_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_IN("AIF4 PB", "AIF4 Playback", 0, SND_SOC_NOPM, 0, 0),
+
+	SND_SOC_DAPM_MIXER_E("AIF4 PB MIX", SND_SOC_NOPM, AIF4_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_AIF_OUT_E("AIF4 VI", "VIfeed", 0, SND_SOC_NOPM,
 			       AIF4_VIFEED, 0,
@@ -7853,15 +7886,19 @@ static const struct snd_soc_dapm_widget tavil_dapm_slim_widgets[] = {
 };
 
 static const struct snd_soc_dapm_widget tavil_dapm_widgets[] = {
-	SND_SOC_DAPM_AIF_IN_E("AIF1 PB", "AIF1 Playback", 0, SND_SOC_NOPM,
-			      AIF1_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_IN_E("AIF2 PB", "AIF2 Playback", 0, SND_SOC_NOPM,
-			      AIF2_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_IN_E("AIF3 PB", "AIF3 Playback", 0, SND_SOC_NOPM,
-			      AIF3_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_IN("AIF1 PB", "AIF1 Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("AIF2 PB", "AIF2 Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("AIF3 PB", "AIF3 Playback", 0, SND_SOC_NOPM, 0, 0),
+
+	SND_SOC_DAPM_MIXER_E("AIF1 PB MIX", SND_SOC_NOPM, AIF1_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MIXER_E("AIF2 PB MIX", SND_SOC_NOPM, AIF2_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MIXER_E("AIF3 PB MIX", SND_SOC_NOPM, AIF3_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	WCD_DAPM_MUX("CDC_IF RX0 MUX", WCD934X_RX0, cdc_if_rx0),
 	WCD_DAPM_MUX("CDC_IF RX1 MUX", WCD934X_RX1, cdc_if_rx1),
@@ -8150,15 +8187,21 @@ static const struct snd_soc_dapm_widget tavil_dapm_widgets[] = {
 		tavil_codec_force_enable_micbias,
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_AIF_OUT_E("AIF1 CAP", "AIF1 Capture", 0, SND_SOC_NOPM,
-			       AIF1_CAP, 0, tavil_codec_enable_tx,
-			       SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_OUT_E("AIF2 CAP", "AIF2 Capture", 0, SND_SOC_NOPM,
-			       AIF2_CAP, 0, tavil_codec_enable_tx,
-			       SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_OUT_E("AIF3 CAP", "AIF3 Capture", 0, SND_SOC_NOPM,
-			       AIF3_CAP, 0, tavil_codec_enable_tx,
-			       SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_OUT("AIF1 CAP", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("AIF2 CAP", "AIF2 Capture", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("AIF3 CAP", "AIF3 Capture", 0, SND_SOC_NOPM, 0, 0),
+
+	SND_SOC_DAPM_MIXER_E("AIF1_CAP_MIX", SND_SOC_NOPM, AIF1_CAP, 0,
+		NULL, 0, tavil_codec_enable_tx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_MIXER_E("AIF2_CAP_MIX", SND_SOC_NOPM, AIF2_CAP, 0,
+		NULL, 0, tavil_codec_enable_tx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_MIXER_E("AIF3_CAP_MIX", SND_SOC_NOPM, AIF3_CAP, 0,
+		NULL, 0, tavil_codec_enable_tx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_MIXER("SLIM TX0", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER("SLIM TX1", SND_SOC_NOPM, 0, 0, NULL, 0),
@@ -11345,6 +11388,7 @@ static int tavil_probe(struct platform_device *pdev)
 	tavil->swr.plat_data.bulk_write = tavil_swrm_bulk_write;
 	tavil->swr.plat_data.clk = tavil_swrm_clock;
 	tavil->swr.plat_data.handle_irq = tavil_swrm_handle_irq;
+	tavil->swr.plat_data.core_vote = NULL;
 	tavil->swr.spkr_gain_offset = WCD934X_RX_GAIN_OFFSET_0_DB;
 
 	/* Register for Clock */

@@ -534,6 +534,7 @@ static int swr_dmic_probe(struct swr_device *pdev)
 	const char *swr_dmic_codec_name_of = NULL;
 	struct snd_soc_component *component = NULL;
 	int num_retry = NUM_ATTEMPTS;
+	size_t name_len = strlen(swr_dmic_name_prefix_of);
 
 	swr_dmic = devm_kzalloc(&pdev->dev, sizeof(struct swr_dmic_priv),
 			    GFP_KERNEL);
@@ -593,11 +594,11 @@ static int swr_dmic_probe(struct swr_device *pdev)
 	}
 
 	/*
-	 * Add 5msec delay to provide sufficient time for
+	 * Add 10msec delay to provide sufficient time for
 	 * soundwire auto enumeration of slave devices as
 	 * as per HW requirement.
 	 */
-	usleep_range(5000, 5010);
+	usleep_range(10000, 10010);
 	do {
 		/* Add delay for soundwire enumeration */
 		usleep_range(100, 110);
@@ -681,8 +682,7 @@ static int swr_dmic_probe(struct swr_device *pdev)
 		ret = -ENOMEM;
 		goto dev_err;
 	}
-	strlcpy(prefix_name, swr_dmic_name_prefix_of,
-			strlen(swr_dmic_name_prefix_of) + 1);
+	strlcpy(prefix_name, swr_dmic_name_prefix_of, name_len + 1);
 	component->name_prefix = prefix_name;
 
 	return 0;

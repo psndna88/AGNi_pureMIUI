@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iommu.h>
@@ -115,6 +115,13 @@ static inline void msm_vidc_free_clock_table(
 	res->clock_set.count = 0;
 }
 
+static inline void msm_vidc_free_cx_ipeak_context(
+			struct msm_vidc_platform_resources *res)
+{
+	cx_ipeak_unregister(res->cx_ipeak_context);
+	res->cx_ipeak_context = NULL;
+}
+
 void msm_vidc_free_platform_resources(
 			struct msm_vidc_platform_resources *res)
 {
@@ -125,6 +132,7 @@ void msm_vidc_free_platform_resources(
 	msm_vidc_free_qdss_addr_table(res);
 	msm_vidc_free_bus_table(res);
 	msm_vidc_free_buffer_usage_table(res);
+	msm_vidc_free_cx_ipeak_context(res);
 }
 
 static int msm_vidc_load_fw_name(struct msm_vidc_platform_resources *res)
@@ -822,9 +830,48 @@ int read_platform_resources_from_drv_data(
 
 	res->vpu_ver = platform_data->vpu_ver;
 	res->ubwc_config = platform_data->ubwc_config;
+	res->max_inst_count = platform_data->max_inst_count;
 
 	return rc;
 
+}
+
+static int msm_vidc_populate_cx_ipeak_context(
+		struct msm_vidc_platform_resources *res)
+{
+	struct platform_device *pdev = res->pdev;
+	int rc = 0;
+
+	if (of_find_property(pdev->dev.of_node,
+			"qcom,cx-ipeak-data", NULL))
+		res->cx_ipeak_context = cx_ipeak_register(
+				pdev->dev.of_node, "qcom,cx-ipeak-data");
+	else
+		return rc;
+
+	if (IS_ERR(res->cx_ipeak_context)) {
+		rc = PTR_ERR(res->cx_ipeak_context);
+		if (rc == -EPROBE_DEFER)
+			d_vpr_h("cx-ipeak register failed. Deferring probe!");
+		else
+			d_vpr_e("cx-ipeak register failed. rc: %d", rc);
+
+		res->cx_ipeak_context = NULL;
+		return rc;
+	}
+
+	if (res->cx_ipeak_context)
+		d_vpr_h("cx-ipeak register successful");
+	else
+		d_vpr_h("cx-ipeak register not implemented");
+
+	of_property_read_u32(pdev->dev.of_node,
+		"qcom,clock-freq-threshold",
+		&res->clk_freq_threshold);
+	d_vpr_h("cx ipeak threshold frequency = %u\n",
+			res->clk_freq_threshold);
+
+	return rc;
 }
 
 int read_platform_resources_from_dt(
@@ -912,9 +959,16 @@ int read_platform_resources_from_dt(
 		goto err_setup_legacy_cb;
 	}
 
+	rc = msm_vidc_populate_cx_ipeak_context(res);
+	if (rc) {
+		d_vpr_e("Failed to setup cx-ipeak %d\n", rc);
+		goto err_register_cx_ipeak;
+	}
 
 return rc;
 
+err_register_cx_ipeak:
+	msm_vidc_free_cx_ipeak_context(res);
 err_setup_legacy_cb:
 err_load_reset_table:
 	msm_vidc_free_allowed_clocks_table(res);

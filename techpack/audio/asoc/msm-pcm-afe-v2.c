@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 
@@ -50,7 +50,7 @@ static struct snd_pcm_hardware msm_afe_hardware_playback = {
 	.rate_min =             8000,
 	.rate_max =             48000,
 	.channels_min =         1,
-	.channels_max =         6,
+	.channels_max =         10,
 	.buffer_bytes_max =     MAX_PLAYBACK_PERIOD_SIZE *
 				MAX_PLAYBACK_NUM_PERIODS,
 	.period_bytes_min =     MIN_PLAYBACK_PERIOD_SIZE,

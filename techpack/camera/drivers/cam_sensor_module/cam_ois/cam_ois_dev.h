@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 #ifndef _CAM_OIS_DEV_H_
 #define _CAM_OIS_DEV_H_
@@ -104,8 +105,6 @@ struct cam_ois_intf_params {
  * @device_name     :   Device name
  * @i2c_pre_init_data:  ois i2c pre init settings
  * @is_ois_pre_init :   flag for pre init settings
- * @i2c_pre_init_data:  ois i2c post init settings
- * @is_ois_post_init :   flag for post init settings
  *
  */
 struct cam_ois_ctrl_t {
@@ -128,10 +127,8 @@ struct cam_ois_ctrl_t {
 	uint8_t ois_fw_flag;
 	uint8_t is_ois_calib;
 	struct cam_ois_opcode opcode;
-	struct i2c_settings_array i2c_pre_init_data;
-	uint8_t is_ois_pre_init;
-	struct i2c_settings_array i2c_post_init_data;
-	uint8_t is_ois_post_init;
+	struct i2c_settings_array i2c_pre_init_data; //xiaomi add
+	uint8_t is_ois_pre_init; //xiaomi add
 };
 
 /**

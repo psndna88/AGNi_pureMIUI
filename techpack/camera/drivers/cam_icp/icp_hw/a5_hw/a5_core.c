@@ -199,10 +199,22 @@ static int32_t cam_a5_download_fw(void *device_priv)
 	pdev = soc_info->pdev;
 	cam_a5_soc_info = soc_info->soc_private;
 
-	rc = request_firmware(&core_info->fw_elf, "CAMERA_ICP.elf", &pdev->dev);
-	if (rc) {
-		CAM_ERR(CAM_ICP, "Failed to locate fw: %d", rc);
-		return rc;
+	if (cam_a5_soc_info->fw_name) {
+		CAM_INFO(CAM_ICP, "Downloading firmware %s",
+			cam_a5_soc_info->fw_name);
+		rc = request_firmware(&core_info->fw_elf,
+				cam_a5_soc_info->fw_name, &pdev->dev);
+		if (rc) {
+			CAM_ERR(CAM_ICP, "Failed to locate fw: %d", rc);
+			return rc;
+		}
+	} else {
+		rc = request_firmware(&core_info->fw_elf,
+				"CAMERA_ICP.elf", &pdev->dev);
+		if (rc) {
+			CAM_ERR(CAM_ICP, "Failed to locate fw: %d", rc);
+			return rc;
+		}
 	}
 
 	if (!core_info->fw_elf) {
@@ -706,6 +718,9 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 			if (*disable_ubwc_comp) {
 				ubwc_ipe_cfg[1] &= ~CAM_ICP_UBWC_COMP_EN;
 				ubwc_bps_cfg[1] &= ~CAM_ICP_UBWC_COMP_EN;
+				CAM_DBG(CAM_ICP,
+					"Force disable UBWC compression, ubwc_ipe_cfg: 0x%x, ubwc_bps_cfg: 0x%x",
+					ubwc_ipe_cfg[1], ubwc_bps_cfg[1]);
 			}
 			rc = hfi_cmd_ubwc_config_ext(&ubwc_ipe_cfg[0],
 					&ubwc_bps_cfg[0]);

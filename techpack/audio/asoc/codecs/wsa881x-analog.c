@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2016, 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -74,6 +75,7 @@ struct wsa881x_pdata {
 	int clk_cnt;
 	int enable_cnt;
 	int version;
+	int wsa881x_id;
 	struct mutex bg_lock;
 	struct mutex res_lock;
 	struct delayed_work ocp_ctl_work;
@@ -90,6 +92,10 @@ enum {
 	WSA881X_STATUS_I2C,
 };
 
+enum {
+	WSA8810,
+	WSA8815,
+};
 #define WSA881X_OCP_CTL_TIMER_SEC 2
 #define WSA881X_OCP_CTL_TEMP_CELSIUS 25
 #define WSA881X_OCP_CTL_POLL_TIMER_SEC 60
@@ -118,9 +124,14 @@ static int wsa881x_i2c_addr = -1;
 static int wsa881x_probing_count;
 static int wsa881x_presence_count;
 
+/* Gain value maximum of 18dBv supported on WSA8815
+* and maximum of 13.5dBv on WSA8810
+*/
 static const char * const wsa881x_spk_pa_gain_text[] = {
-"POS_13P5_DB", "POS_12_DB", "POS_10P5_DB", "POS_9_DB", "POS_7P5_DB",
-"POS_6_DB", "POS_4P5_DB", "POS_3_DB", "POS_1P5_DB", "POS_0_DB"};
+"POS_18_DB", "POS_16P5_DB", "POS_15_DB", "POS_13P5_DB",
+"POS_12_DB", "POS_10P5_DB", "POS_9_DB", "POS_7P5_DB",
+"POS_6_DB", "POS_4P5_DB", "POS_3_DB", "POS_1P5_DB",
+"POS_0_DB"};
 
 static const struct soc_enum wsa881x_spk_pa_gain_enum[] = {
 		SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(wsa881x_spk_pa_gain_text),
@@ -155,6 +166,12 @@ static int wsa881x_spk_pa_gain_put(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] > 0xC) {
 		dev_err(component->dev, "%s: Unsupported gain val %ld\n",
 			 __func__, ucontrol->value.integer.value[0]);
+		return -EINVAL;
+	}
+	if (ucontrol->value.integer.value[0] < 3 &&
+			wsa881x->wsa881x_id == WSA8810) {
+		dev_err(component->dev, "%s: Unsupported gain val %ld for WSA8810\n",
+				__func__, ucontrol->value.integer.value[0]);
 		return -EINVAL;
 	}
 	wsa881x->spk_pa_gain = ucontrol->value.integer.value[0];
@@ -273,7 +290,8 @@ static int wsa881x_i2c_read_device(struct wsa881x_pdata *wsa881x,
 		}
 		pr_debug("read success reg = %x val = %x\n",
 						reg, val);
-	} else {
+	} else if (wsa881x->client[wsa881x_index]) {
+
 		reg_addr = (u8)reg;
 		msg = &wsa881x->xfer_msg[0];
 		msg->addr = wsa881x->client[wsa881x_index]->addr;
@@ -301,6 +319,9 @@ static int wsa881x_i2c_read_device(struct wsa881x_pdata *wsa881x,
 			}
 		}
 		val = dest[0];
+	} else {
+		pr_err("failed for i2c client is not initilized\n");
+		return -EINVAL;
 	}
 	return val;
 }
@@ -805,7 +826,40 @@ static int wsa881x_set_visense(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int wsa881x_get_t0_init(struct snd_kcontrol *kcontrol,
+							struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+					snd_soc_kcontrol_component(kcontrol);
+	struct wsa881x_pdata *wsa881x =
+					snd_soc_component_get_drvdata(component);
+	struct wsa881x_tz_priv *pdata = &wsa881x->tz_pdata;
+
+	ucontrol->value.integer.value[0] = pdata->t0_init;
+	dev_dbg(component->dev, "%s: t0 init %d\n", __func__, pdata->t0_init);
+
+	return 0;
+}
+
+static int wsa881x_set_t0_init(struct snd_kcontrol *kcontrol,
+							struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+					snd_soc_kcontrol_component(kcontrol);
+	struct wsa881x_pdata *wsa881x =
+					snd_soc_component_get_drvdata(component);
+	struct wsa881x_tz_priv *pdata = &wsa881x->tz_pdata;
+
+	pdata->t0_init = ucontrol->value.integer.value[0];
+	dev_dbg(component->dev, "%s: t0 init %d\n", __func__, pdata->t0_init);
+
+	return 0;
+}
+
 static const struct snd_kcontrol_new wsa881x_snd_controls[] = {
+	SOC_SINGLE_EXT("WSA T0 Init", SND_SOC_NOPM, 0, 1, 0,
+		wsa881x_get_t0_init, wsa881x_set_t0_init),
+
 	SOC_SINGLE_EXT("BOOST Switch", SND_SOC_NOPM, 0, 1, 0,
 		wsa881x_get_boost, wsa881x_set_boost),
 
@@ -922,7 +976,7 @@ static void wsa881x_ocp_ctl_work(struct work_struct *work)
 	struct wsa881x_pdata *wsa881x;
 	struct delayed_work *dwork;
 	struct snd_soc_component *component;
-	int temp_val;
+	int temp_val = 0;
 
 	dwork = to_delayed_work(work);
 	wsa881x = container_of(dwork, struct wsa881x_pdata, ocp_ctl_work);
@@ -1156,6 +1210,19 @@ static int wsa881x_probe(struct snd_soc_component *component)
 			"client failed\n", __func__);
 		return ret;
 	}
+
+	while (retry) {
+		if (wsa_pdata[wsa881x_index].regmap_flag)
+			break;
+		msleep(100);
+		retry--;
+	}
+	if (!retry) {
+		dev_err(&client->dev, "%s: max retry expired and regmap of\n"
+				"analog slave not initilized\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
 	mutex_init(&wsa_pdata[wsa881x_index].bg_lock);
 	mutex_init(&wsa_pdata[wsa881x_index].res_lock);
 	snprintf(wsa_pdata[wsa881x_index].tz_pdata.name, 100, "%s",
@@ -1167,16 +1234,6 @@ static int wsa881x_probe(struct snd_soc_component *component)
 	wsa_pdata[wsa881x_index].tz_pdata.wsa_temp_reg_read =
 						wsa881x_temp_reg_read;
 	snd_soc_component_set_drvdata(component, &wsa_pdata[wsa881x_index]);
-	while (retry) {
-		if (wsa_pdata[wsa881x_index].regmap[WSA881X_ANALOG_SLAVE]
-							!= NULL)
-			break;
-		msleep(100);
-		retry--;
-	}
-	if (!retry)
-		dev_err(&client->dev, "%s: max retry expired and regmap of\n"
-				"analog slave not initilized\n", __func__);
 	wsa881x_init_thermal(&wsa_pdata[wsa881x_index].tz_pdata);
 	INIT_DELAYED_WORK(&wsa_pdata[wsa881x_index].ocp_ctl_work,
 				wsa881x_ocp_ctl_work);
@@ -1497,6 +1554,14 @@ static int wsa881x_i2c_probe(struct i2c_client *client,
 					pdata->regmap[WSA881X_DIGITAL_SLAVE],
 					WSA881X_DIGITAL_SLAVE);
 		}
+		pdata->wsa881x_id = wsa881x_i2c_read_device(pdata,
+					WSA881X_OTP_REG_0);
+		if (pdata->wsa881x_id & 0x01) {
+			pdata->wsa881x_id = WSA8815;
+		} else {
+			pdata->wsa881x_id = WSA8810;
+		}
+		pr_debug("%s: wsa881x_id : %d\n", __func__, pdata->wsa881x_id);
 		wsa881x_presence_count++;
 		wsa881x_probing_count++;
 

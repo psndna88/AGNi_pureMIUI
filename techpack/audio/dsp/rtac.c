@@ -159,9 +159,10 @@ int rtac_allocate_cal_buffer(uint32_t cal_type)
 		&rtac_cal[cal_type].cal_data.paddr,
 		&len,
 		&rtac_cal[cal_type].cal_data.kvaddr);
-	if (result < 0) {
+	if (result) {
 		pr_err("%s: ION create client for RTAC failed\n",
 		       __func__);
+		result = -EINVAL;
 		goto done;
 	}
 
@@ -2068,6 +2069,13 @@ void rtac_exit(void)
 	kzfree(rtac_asm_buffer);
 	kzfree(rtac_afe_buffer);
 	kzfree(rtac_voice_buffer);
+	mutex_destroy(&rtac_voice_apr_mutex);
+	mutex_destroy(&rtac_voice_mutex);
+	mutex_destroy(&rtac_afe_apr_mutex);
+	mutex_destroy(&rtac_asm_apr_mutex);
+	mutex_destroy(&rtac_adm_apr_mutex);
+	mutex_destroy(&rtac_adm_mutex);
+	mutex_destroy(&rtac_common.rtac_fops_mutex);
 }
 
 MODULE_DESCRIPTION("SoC QDSP6v2 Real-Time Audio Calibration driver");

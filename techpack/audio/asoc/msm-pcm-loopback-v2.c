@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+/*
+ * Add support for 24 and 32bit format for ASM loopback and playback session.
  */
 
 #include <linux/init.h>
@@ -301,6 +305,7 @@ static int msm_pcm_open(struct snd_pcm_substream *substream)
 	struct asm_session_mtmx_strtr_param_window_v2_t asm_mtmx_strtr_window;
 	uint32_t param_id;
 	struct msm_pcm_pdata *pdata;
+	uint16_t format = 0;
 
 	if (!component) {
 		pr_err("%s: component is NULL\n", __func__);
@@ -348,6 +353,23 @@ static int msm_pcm_open(struct snd_pcm_substream *substream)
 		pcm->audio_client->fedai_id = rtd->dai_link->id;
 		pcm->audio_client->perf_mode = pdata->perf_mode;
 		pcm->audio_client->stream_type = substream->stream;
+
+		format = msm_pcm_asm_cfg_get(rtd->dai_link->id, MSM_ASM_LOOPBACK_MODE);
+		switch (format) {
+		case SNDRV_PCM_FORMAT_S32_LE:
+			bits_per_sample = 32;
+			break;
+		case SNDRV_PCM_FORMAT_S24_LE:
+		case SNDRV_PCM_FORMAT_S24_3LE:
+			bits_per_sample = 24;
+			break;
+		case SNDRV_PCM_FORMAT_S16_LE:
+		default:
+			bits_per_sample = 16;
+		}
+		pr_debug("%s: fe_id:%d, bits_per_sample:%d\n",__func__,
+			rtd->dai_link->id,bits_per_sample);
+
 		ret = q6asm_open_loopback_with_retry(pcm->audio_client,
 					bits_per_sample);
 		pcm->session_id = pcm->audio_client->session;
@@ -527,9 +549,8 @@ static int msm_pcm_prepare(struct snd_pcm_substream *substream)
 			return -EINVAL;
 		}
 
-		ret = q6asm_send_cal(pcm->audio_client);
-		if (ret < 0)
-			pr_err("%s : Send audio cal failed : %d", __func__, ret);
+		if (q6asm_send_cal(pcm->audio_client) < 0)
+			pr_info("%s : Send audio cal failed\n", __func__);
 
 		msm_pcm_routing_reg_phy_stream(soc_pcm_tx->dai_link->id,
 			pcm->audio_client->perf_mode,
@@ -684,7 +705,7 @@ static int msm_pcm_playback_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	u64 fe_id = kcontrol->private_value;
 	int session_type = SESSION_TYPE_RX;
 	int be_id = ucontrol->value.integer.value[3];
-	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0};
+	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0, 0, 0};
 	int ret = 0;
 
 	cfg_data.app_type = ucontrol->value.integer.value[0];
@@ -693,10 +714,14 @@ static int msm_pcm_playback_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		cfg_data.sample_rate = ucontrol->value.integer.value[2];
 	if (ucontrol->value.integer.value[4] != 0)
 		cfg_data.copp_token = ucontrol->value.integer.value[4];
-	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d sample_rate- %d copp_token %d\n",
-		__func__, fe_id, session_type, be_id,
-		cfg_data.app_type, cfg_data.acdb_dev_id, cfg_data.sample_rate,
-		cfg_data.copp_token);
+	if (ucontrol->value.integer.value[5] != 0)
+		cfg_data.bit_width = ucontrol->value.integer.value[5];
+	if (ucontrol->value.integer.value[6] != 0)
+		cfg_data.copp_perf_mode = ucontrol->value.integer.value[6];
+	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
+		__func__, fe_id, session_type, be_id, cfg_data.app_type, cfg_data.acdb_dev_id,
+		cfg_data.sample_rate, cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 	ret = msm_pcm_routing_reg_stream_app_type_cfg(fe_id, session_type,
 						      be_id, &cfg_data);
 	if (ret < 0)
@@ -728,10 +753,13 @@ static int msm_pcm_playback_app_type_cfg_ctl_get(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[2] = cfg_data.sample_rate;
 	ucontrol->value.integer.value[3] = be_id;
 	ucontrol->value.integer.value[4] = cfg_data.copp_token;
-	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d sample_rate- %d copp_token %d\n",
+	ucontrol->value.integer.value[5] = cfg_data.bit_width;
+	ucontrol->value.integer.value[6] = cfg_data.copp_perf_mode;
+	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
 		__func__, fe_id, session_type, be_id,
 		cfg_data.app_type, cfg_data.acdb_dev_id, cfg_data.sample_rate,
-		cfg_data.copp_token);
+		cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 
 done:
 	return ret;
@@ -743,7 +771,7 @@ static int msm_pcm_capture_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	u64 fe_id = kcontrol->private_value;
 	int session_type = SESSION_TYPE_TX;
 	int be_id = ucontrol->value.integer.value[3];
-	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0};
+	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0, 0, 0};
 	int ret = 0;
 
 	cfg_data.app_type = ucontrol->value.integer.value[0];
@@ -752,10 +780,14 @@ static int msm_pcm_capture_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		cfg_data.sample_rate = ucontrol->value.integer.value[2];
 	if (ucontrol->value.integer.value[4] != 0)
 		cfg_data.copp_token = ucontrol->value.integer.value[4];
-	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d sample_rate- %d copp_token %d\n",
-		__func__, fe_id, session_type, be_id,
-		cfg_data.app_type, cfg_data.acdb_dev_id, cfg_data.sample_rate,
-		cfg_data.copp_token);
+	if (ucontrol->value.integer.value[5] != 0)
+		cfg_data.bit_width = ucontrol->value.integer.value[5];
+	if (ucontrol->value.integer.value[6] != 0)
+		cfg_data.copp_perf_mode = ucontrol->value.integer.value[6];
+	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
+		__func__, fe_id, session_type, be_id, cfg_data.app_type, cfg_data.acdb_dev_id,
+		cfg_data.sample_rate, cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 	ret = msm_pcm_routing_reg_stream_app_type_cfg(fe_id, session_type,
 						      be_id, &cfg_data);
 	if (ret < 0)
@@ -787,10 +819,13 @@ static int msm_pcm_capture_app_type_cfg_ctl_get(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[2] = cfg_data.sample_rate;
 	ucontrol->value.integer.value[3] = be_id;
 	ucontrol->value.integer.value[4] = cfg_data.copp_token;
-	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d sample_rate- %d copp_token %d\n",
+	ucontrol->value.integer.value[5] = cfg_data.bit_width;
+	ucontrol->value.integer.value[6] = cfg_data.copp_perf_mode;
+	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
 		__func__, fe_id, session_type, be_id,
 		cfg_data.app_type, cfg_data.acdb_dev_id, cfg_data.sample_rate,
-		cfg_data.copp_token);
+		cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 done:
 	return ret;
 }
@@ -929,8 +964,13 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 					__func__, chmixer_pspd->input_channel);
 				return -EINVAL;
 			}
-			q6asm_map_channels(asm_ch_map,
+			ret = q6asm_map_channels(asm_ch_map,
 				chmixer_pspd->input_channel, false);
+			if (ret < 0) {
+				pr_err("%s q6asm_map_channels failed\n", __func__);
+				return ret;
+			}
+
 			for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
 				chmixer_pspd->in_ch_map[i] = asm_ch_map[i];
 			chmixer_pspd->override_in_ch_map = true;
@@ -942,8 +982,12 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 					__func__, chmixer_pspd->output_channel);
 				return -EINVAL;
 			}
-			q6asm_map_channels(asm_ch_map,
+			ret = q6asm_map_channels(asm_ch_map,
 				chmixer_pspd->output_channel, false);
+			if (ret < 0) {
+				pr_err("%s q6asm_map_channels failed\n", __func__);
+				return ret;
+			}
 			for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
 				chmixer_pspd->out_ch_map[i] = asm_ch_map[i];
 			chmixer_pspd->override_out_ch_map = true;
@@ -978,10 +1022,17 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		if (prtd->audio_client) {
 			stream_id = prtd->audio_client->session;
 			be_id = chmixer_pspd->port_idx;
+#ifdef CONFIG_PLATFORM_AUTO
+			msm_pcm_routing_set_channel_mixer_runtime(fe_id, be_id,
+					stream_id,
+					session_type,
+					chmixer_pspd);
+#else
 			msm_pcm_routing_set_channel_mixer_runtime(be_id,
 					stream_id,
 					session_type,
 					chmixer_pspd);
+#endif
 		}
 	}
 	mutex_unlock(&loopback_session_lock);
@@ -2048,8 +2099,7 @@ static int msm_loopback_adsp_stream_cmd_put(struct snd_kcontrol *kcontrol,
 	audio_client = q6asm_get_audio_client(fe_dai.strm_id);
 
 	event_data = (struct msm_adsp_event_data *)ucontrol->value.bytes.data;
-	if ((event_data->event_type < ADSP_STREAM_PP_EVENT) ||
-	    (event_data->event_type >= ADSP_STREAM_EVENT_MAX)) {
+	if (event_data->event_type >= ADSP_STREAM_EVENT_MAX) {
 		pr_err("%s: invalid event_type=%d\n",
 			__func__, event_data->event_type);
 		ret = -EINVAL;

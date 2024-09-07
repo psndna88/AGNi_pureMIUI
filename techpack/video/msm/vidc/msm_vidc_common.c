@@ -11,6 +11,13 @@
 #include "msm_vidc_clocks.h"
 #include "msm_vidc_buffer_calculations.h"
 
+static struct kmem_cache *kmem_buf_pool;
+
+void __init init_vidc_kmem_buf_pool(void)
+{
+	kmem_buf_pool = KMEM_CACHE(msm_vidc_buffer, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+}
+
 #define IS_ALREADY_IN_STATE(__p, __d) (\
 	(__p >= __d)\
 )
@@ -1269,8 +1276,20 @@ static int wait_for_sess_signal_receipt(struct msm_vidc_inst *inst,
 		msecs_to_jiffies(
 			inst->core->resources.msm_vidc_hw_rsp_timeout));
 	if (!rc) {
-		s_vpr_e(inst->sid, "Wait interrupted or timed out: %d\n",
+		s_vpr_e(inst->sid, "Wait interrupted or timed out(sending ping cmd): %d\n",
 				SESSION_MSG_INDEX(cmd));
+		rc = call_hfi_op(hdev, core_ping, hdev->hfi_device_data, inst->sid);
+		rc = wait_for_completion_timeout(
+				&inst->core->completions[SYS_MSG_INDEX(HAL_SYS_PING_ACK)],
+				msecs_to_jiffies(
+				inst->core->resources.msm_vidc_hw_rsp_timeout));
+		if (rc) {
+			if (try_wait_for_completion(&inst->completions[SESSION_MSG_INDEX(cmd)])) {
+				s_vpr_e(inst->sid, "Received %d response. Continue session\n",
+								SESSION_MSG_INDEX(cmd));
+				return 0;
+			}
+		}
 		msm_comm_kill_session(inst);
 		rc = -EIO;
 	} else {
@@ -1395,6 +1414,9 @@ static void msm_vidc_comm_update_ctrl_limits(struct msm_vidc_inst *inst)
 	msm_vidc_comm_update_ctrl(inst,
 			V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
 			&inst->capability.cap[CAP_HEVC_LEVEL]);
+	msm_vidc_comm_update_ctrl(inst,
+			V4L2_CID_MPEG_VIDC_VIDEO_VP9_LEVEL,
+			&inst->capability.cap[CAP_VP9_LEVEL]);
 	/*
 	 * Default value of level is unknown, but since we are not
 	 * using unknown value while updating level controls, we need
@@ -1897,6 +1919,28 @@ static void handle_stop_done(enum hal_command_response cmd, void *data)
 
 	s_vpr_l(inst->sid, "handled: SESSION_STOP_DONE\n");
 	signal_session_msg_receipt(cmd, inst);
+	put_inst(inst);
+}
+
+static void handle_ping_done(enum hal_command_response cmd, void *data)
+{
+	struct msm_vidc_cb_cmd_done *response = data;
+	struct msm_vidc_inst *inst;
+
+	if (!response) {
+		d_vpr_e("Failed to get valid response for stop\n");
+		return;
+	}
+
+	inst = get_inst(get_vidc_core(response->device_id),
+			response->inst_id);
+	if (!inst) {
+		d_vpr_e("Got a response for an inactive session\n");
+		return;
+	}
+
+	s_vpr_l(inst->sid, "handled: SYS_PING_DONE\n");
+	complete(&inst->core->completions[SYS_MSG_INDEX(HAL_SYS_PING_ACK)]);
 	put_inst(inst);
 }
 
@@ -2728,6 +2772,9 @@ void handle_cmd_response(enum hal_command_response cmd, void *data)
 	case HAL_SESSION_ABORT_DONE:
 		handle_session_close(cmd, data);
 		break;
+	case HAL_SYS_PING_ACK:
+		handle_ping_done(cmd, data);
+		break;
 	case HAL_SESSION_EVENT_CHANGE:
 		handle_event_change(cmd, data);
 		break;
@@ -3014,7 +3061,7 @@ static int msm_comm_init_core(struct msm_vidc_inst *inst)
 	core->state = VIDC_CORE_INIT;
 	core->smmu_fault_handled = false;
 	core->trigger_ssr = false;
-	core->resources.max_inst_count = MAX_SUPPORTED_INSTANCES;
+	core->pm_suspended = false;
 	core->resources.max_secure_inst_count =
 		core->resources.max_secure_inst_count ?
 		core->resources.max_secure_inst_count :
@@ -4501,10 +4548,11 @@ void msm_vidc_batch_handler(struct work_struct *work)
 {
 	int rc = 0;
 	struct msm_vidc_inst *inst;
+	struct msm_vidc_core *core;
 
 	inst = container_of(work, struct msm_vidc_inst, batch_work.work);
 	inst = get_inst(get_vidc_core(MSM_VIDC_CORE_VENUS), inst);
-	if (!inst) {
+	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params\n", __func__);
 		return;
 	}
@@ -4514,9 +4562,14 @@ void msm_vidc_batch_handler(struct work_struct *work)
 		goto exit;
 	}
 
+	core = inst->core;
+	if (core->pm_suspended) {
+		s_vpr_h(inst->sid, "%s: device in pm suspend state\n", __func__);
+		goto exit;
+	}
+
 	s_vpr_h(inst->sid, "%s: queue pending batch buffers\n",
 		__func__);
-
 	rc = msm_comm_qbufs_batch(inst, NULL);
 	if (rc) {
 		s_vpr_e(inst->sid, "%s: batch qbufs failed\n", __func__);
@@ -6936,7 +6989,7 @@ struct msm_vidc_buffer *msm_comm_get_vidc_buffer(struct msm_vidc_inst *inst,
 
 	if (!found) {
 		/* this is new vb2_buffer */
-		mbuf = kzalloc(sizeof(struct msm_vidc_buffer), GFP_KERNEL);
+		mbuf = kmem_cache_zalloc(kmem_buf_pool, GFP_KERNEL);
 		if (!mbuf) {
 			s_vpr_e(inst->sid, "%s: alloc msm_vidc_buffer failed\n",
 				__func__);
@@ -7227,7 +7280,7 @@ static void kref_free_mbuf(struct kref *kref)
 	struct msm_vidc_buffer *mbuf = container_of(kref,
 			struct msm_vidc_buffer, kref);
 
-	kfree(mbuf);
+	kmem_cache_free(kmem_buf_pool, mbuf);
 }
 
 void kref_put_mbuf(struct msm_vidc_buffer *mbuf)
@@ -7776,7 +7829,7 @@ u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
 	capability = &inst->capability;
 
 	if (timestamp_us <= prev_ts) {
-		s_vpr_e(inst->sid, "%s: invalid ts %lld, prev ts %lld\n",
+		s_vpr_e(inst->sid, "%s: invalid ts %llu, prev ts %llu\n",
 			__func__, timestamp_us, prev_ts);
 		return framerate;
 	}
@@ -7807,7 +7860,7 @@ u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
 	}
 	avg_framerate = count ? (div_u64(avg_framerate, count)) : (1 << 16);
 
-	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n", __func__, avg_framerate, count);
+	s_vpr_l(inst->sid, "%s: fps %u, list size %u\n", __func__, avg_framerate, count);
 	mutex_unlock(&inst->timestamps.lock);
 	return (u32)avg_framerate;
 }

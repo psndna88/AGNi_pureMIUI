@@ -893,6 +893,9 @@ static int cam_res_mgr_component_bind(struct device *dev,
 	int rc = 0;
 	struct platform_device *pdev = to_platform_device(dev);
 
+	if (cam_res)
+		return 0;
+
 	cam_res = kzalloc(sizeof(*cam_res), GFP_KERNEL);
 	if (!cam_res) {
 		CAM_ERR(CAM_RES, "Not Enough Mem");

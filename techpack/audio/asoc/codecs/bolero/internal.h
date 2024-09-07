@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _BOLERO_INTERNAL_H
@@ -28,6 +28,7 @@ struct bolero_priv {
 	struct device *dev;
 	struct snd_soc_component *component;
 	struct regmap *regmap;
+	struct mutex macro_lock;
 	struct mutex io_lock;
 	struct mutex clk_lock;
 	struct mutex vote_lock;

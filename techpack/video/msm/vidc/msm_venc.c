@@ -522,6 +522,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.minimum = EXTRADATA_NONE,
 		.maximum = EXTRADATA_ADVANCED | EXTRADATA_ENC_INPUT_ROI |
 			EXTRADATA_ENC_INPUT_HDR10PLUS |
+			EXTRADATA_ENC_INPUT_CROP |
 			EXTRADATA_ENC_INPUT_CVP | EXTRADATA_ENC_FRAME_QP,
 		.default_value = EXTRADATA_NONE,
 		.menu_skip_mask = 0,
@@ -595,6 +596,16 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 			V4L2_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER_0,
 		.step = 1,
 		.menu_skip_mask = 0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VENC_COMPLEXITY,
+		.name = "Encoder complexity",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 100,
+		.default_value = 100,
+		.step = 1,
+		.qmenu = NULL,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE,
@@ -1576,7 +1587,7 @@ static int msm_venc_update_bitrate(struct msm_vidc_inst *inst)
 
 int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 {
-	int rc = 0;
+	int rc = 0, hevc_tier_value = 0;
 	struct msm_vidc_mastering_display_colour_sei_payload *mdisp_sei = NULL;
 	struct msm_vidc_content_light_level_sei_payload *cll_sei = NULL;
 	u32 i_qp_min, i_qp_max, p_qp_min, p_qp_max, b_qp_min, b_qp_max;
@@ -1777,7 +1788,8 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			inst->prop.extradata_ctrls |= ctrl->val;
 
 		if ((inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_ROI) ||
-		(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_HDR10PLUS)) {
+		(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_HDR10PLUS) ||
+		(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CROP)) {
 			f = &inst->fmts[INPUT_PORT].v4l2_fmt;
 			f->fmt.pix_mp.num_planes = 2;
 			f->fmt.pix_mp.plane_fmt[1].sizeimage =
@@ -1804,7 +1816,13 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-		inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid);
+		if ((inst->level & 0xf0000000) && get_v4l2_codec(inst) == V4L2_PIX_FMT_HEVC) {
+			hevc_tier_value = (inst->level & 0xf0000000);
+			inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid) | hevc_tier_value;
+		}
+		else {
+			inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid);
+		}
 		break;
 	case V4L2_CID_MPEG_VIDEO_HEVC_TIER:
 		inst->level |=
@@ -1976,6 +1994,11 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST:
 		inst->boost_enabled = true;
 		break;
+	case V4L2_CID_MPEG_VIDC_VENC_COMPLEXITY:
+		if (is_realtime_session(inst)) {
+			s_vpr_h(sid, "Client is setting complexity for RT session\n");
+		}
+		break;
 	case V4L2_CID_MPEG_VIDEO_H264_ENTROPY_MODE:
 		inst->entropy_mode = msm_comm_v4l2_to_hfi(
 			V4L2_CID_MPEG_VIDEO_H264_ENTROPY_MODE,
@@ -2135,6 +2158,7 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	int count = 0;
 	int rc = 0;
 	struct v4l2_ctrl *superframe_ctrl = NULL;
+	struct v4l2_ctrl *ctrl = NULL;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
@@ -2143,6 +2167,12 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 
 	if (!inst->core->resources.enc_auto_dynamic_fps ||
 		is_image_session(inst))
+		return rc;
+
+	/* set auto-framerate only for VBR CFR native recorder */
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER);
+	if ((ctrl && ctrl->val == V4L2_MPEG_MSM_VIDC_DISABLE) ||
+		(inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR))
 		return rc;
 
 	mutex_lock(&inst->timestamps.lock);
@@ -2501,7 +2531,8 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 
 	intra_period.pframes = gop_size->val;
 
-	if (!max_layer->val && codec == V4L2_PIX_FMT_H264) {
+	/* max_layer 0/1 indicates absence of layer encoding */
+	if (max_layer->val < 2) {
 		/*
 		 * At this point we've already made decision on bframe.
 		 * Control value gives updated bframe value.
@@ -4631,6 +4662,12 @@ int msm_venc_set_extradata(struct msm_vidc_inst *inst)
 			HFI_PROPERTY_PARAM_VENC_HDR10PLUS_METADATA_EXTRADATA,
 			0x1);
 		}
+	}
+
+	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CROP) {
+		// Enable Input Crop Extradata
+		msm_comm_set_index_extradata(inst, MSM_VIDC_EXTRADATA_INPUT_CROP, 0x1);
+		s_vpr_l(inst->sid, "%s: enable input crop encoding\n", __func__);
 	}
 
 	if(!msm_vidc_cvp_usage)

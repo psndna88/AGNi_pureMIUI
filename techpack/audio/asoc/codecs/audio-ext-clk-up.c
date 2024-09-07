@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -17,6 +18,7 @@
 #include <linux/ratelimit.h>
 #include <dsp/q6afe-v2.h>
 #include "audio-ext-clk-up.h"
+#include <soc/qcom/subsystem_restart.h>
 
 enum {
 	AUDIO_EXT_CLK_PMI,
@@ -58,6 +60,8 @@ struct audio_ext_clk_priv {
 	uint32_t lpass_audio_hwvote_client_handle;
 };
 
+static struct audio_ext_clk audio_clk_array[];
+
 static inline struct audio_ext_clk_priv *to_audio_clk(struct clk_hw *hw)
 {
 	return container_of(hw, struct audio_ext_clk_priv, audio_clk.fact.hw);
@@ -73,8 +77,6 @@ static int audio_ext_clk_prepare(struct clk_hw *hw)
 	if ((clk_priv->clk_src >= AUDIO_EXT_CLK_LPASS) &&
 		(clk_priv->clk_src < AUDIO_EXT_CLK_LPASS_MAX))  {
 		clk_priv->clk_cfg.enable = 1;
-		trace_printk("%s: vote for %d clock\n",
-			__func__, clk_priv->clk_src);
 		ret = afe_set_lpass_clk_cfg(IDX_RSVD_3, &clk_priv->clk_cfg);
 		if (ret < 0) {
 			if (__ratelimit(&rtl))
@@ -119,8 +121,6 @@ static void audio_ext_clk_unprepare(struct clk_hw *hw)
 	if ((clk_priv->clk_src >= AUDIO_EXT_CLK_LPASS) &&
 		(clk_priv->clk_src < AUDIO_EXT_CLK_LPASS_MAX))  {
 		clk_priv->clk_cfg.enable = 0;
-		trace_printk("%s: unvote for %d clock\n",
-			__func__, clk_priv->clk_src);
 		ret = afe_set_lpass_clk_cfg(IDX_RSVD_3, &clk_priv->clk_cfg);
 		if (ret < 0) {
 			if (__ratelimit(&rtl))
@@ -137,8 +137,8 @@ static u8 audio_ext_clk_get_parent(struct clk_hw *hw)
 {
 	struct audio_ext_clk_priv *clk_priv = to_audio_clk(hw);
 	int num_parents = clk_hw_get_num_parents(hw);
-	const char * const *parent_names = hw->init->parent_names;
-	u8 i = 0, ret = hw->init->num_parents + 1;
+	const char * const *parent_names = audio_clk_array[clk_priv->clk_src].fact.hw.init->parent_names;
+	u8 i = 0, ret = num_parents + 1;
 
 	if ((clk_priv->clk_src == AUDIO_EXT_CLK_PMI) && clk_priv->clk_name) {
 		for (i = 0; i < num_parents; i++) {
@@ -156,9 +156,11 @@ static int lpass_hw_vote_prepare(struct clk_hw *hw)
 	struct audio_ext_clk_priv *clk_priv = to_audio_clk(hw);
 	int ret;
 	static DEFINE_RATELIMIT_STATE(rtl, 1 * HZ, 1);
+	struct subsys_device *adsp_dev = NULL;
 
+	adsp_dev = find_subsys_device("adsp");
 	if (clk_priv->clk_src == AUDIO_EXT_CLK_LPASS_CORE_HW_VOTE)  {
-		trace_printk("%s: vote for %d clock\n",
+		pr_debug("%s: vote for %d clock\n",
 			__func__, clk_priv->clk_src);
 		ret = afe_vote_lpass_core_hw(AFE_LPASS_CORE_HW_MACRO_BLOCK,
 			"LPASS_HW_MACRO",
@@ -166,12 +168,15 @@ static int lpass_hw_vote_prepare(struct clk_hw *hw)
 		if (ret < 0) {
 			pr_err("%s lpass core hw vote failed %d\n",
 				__func__, ret);
+			if (ret == -110 && adsp_dev != NULL) {
+				subsystem_restart_dev(adsp_dev);
+			}
 			return ret;
 		}
 	}
 
 	if (clk_priv->clk_src == AUDIO_EXT_CLK_LPASS_AUDIO_HW_VOTE)  {
-		trace_printk("%s: vote for %d clock\n",
+		pr_debug("%s: vote for %d clock\n",
 			__func__, clk_priv->clk_src);
 		ret = afe_vote_lpass_core_hw(AFE_LPASS_CORE_HW_DCODEC_BLOCK,
 			"LPASS_HW_DCODEC",
@@ -191,21 +196,26 @@ static void lpass_hw_vote_unprepare(struct clk_hw *hw)
 {
 	struct audio_ext_clk_priv *clk_priv = to_audio_clk(hw);
 	int ret = 0;
+	struct subsys_device *adsp_dev = NULL;
 
+	adsp_dev = find_subsys_device("adsp");
 	if (clk_priv->clk_src == AUDIO_EXT_CLK_LPASS_CORE_HW_VOTE) {
-		trace_printk("%s: unvote for %d clock\n",
+		pr_debug("%s: unvote for %d clock\n",
 			__func__, clk_priv->clk_src);
 		ret = afe_unvote_lpass_core_hw(
 			AFE_LPASS_CORE_HW_MACRO_BLOCK,
 			clk_priv->lpass_core_hwvote_client_handle);
 		if (ret < 0) {
+			if (ret == -110 && adsp_dev != NULL) {
+				subsystem_restart_dev(adsp_dev);
+			}
 			pr_err("%s lpass core hw vote failed %d\n",
 				__func__, ret);
 		}
 	}
 
 	if (clk_priv->clk_src == AUDIO_EXT_CLK_LPASS_AUDIO_HW_VOTE) {
-		trace_printk("%s: unvote for %d clock\n",
+		pr_debug("%s: unvote for %d clock\n",
 			__func__, clk_priv->clk_src);
 		ret = afe_unvote_lpass_core_hw(
 			AFE_LPASS_CORE_HW_DCODEC_BLOCK,

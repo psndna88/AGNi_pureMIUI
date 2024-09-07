@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_VFE_HW_INTF_H_
@@ -14,6 +14,7 @@
 #define CAM_VFE_HW_NUM_MAX            7
 
 #define VFE_CORE_BASE_IDX             0
+#define CAMNOC_CORE_BASE_IDX          1
 #define RT_BASE_IDX                   2
 /*
  * VBIF and BUS do not exist on same HW.
@@ -141,6 +142,7 @@ struct cam_vfe_hw_vfe_bus_rd_acquire_args {
  *                           (Default is Master in case of Single VFE)
  * @dual_slave_core:         If Master and Slave exists, HW Index of Slave
  * @cdm_ops:                 CDM operations
+ * @disable_ubwc_comp:       Disable UBWC compression
  */
 struct cam_vfe_hw_vfe_out_acquire_args {
 	struct cam_isp_resource_node         *rsrc_node;
@@ -151,6 +153,7 @@ struct cam_vfe_hw_vfe_out_acquire_args {
 	uint32_t                              is_master;
 	uint32_t                              dual_slave_core;
 	struct cam_cdm_utils_ops             *cdm_ops;
+	bool                                  disable_ubwc_comp;
 };
 
 /*
@@ -318,6 +321,7 @@ struct cam_vfe_top_irq_evt_payload {
  *                           handled
  * @error_type:              Identify different errors
  * @ts:                      Timestamp
+ * @evt_param                Specific info about frame
  */
 struct cam_vfe_bus_irq_evt_payload {
 	struct list_head            list;
@@ -329,6 +333,7 @@ struct cam_vfe_bus_irq_evt_payload {
 	uint32_t                    evt_id;
 	uint32_t                    irq_reg_val[CAM_IFE_BUS_IRQ_REGISTERS_MAX];
 	struct cam_isp_timestamp    ts;
+	uint32_t                    evt_param;
 };
 
 /**

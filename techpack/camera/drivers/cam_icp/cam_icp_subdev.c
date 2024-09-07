@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -73,6 +73,8 @@ static int cam_icp_subdev_open(struct v4l2_subdev *sd,
 	struct cam_node *node = v4l2_get_subdevdata(sd);
 	int rc = 0;
 
+	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_LOCK);
+
 	mutex_lock(&g_icp_dev.icp_lock);
 	if (g_icp_dev.open_cnt >= 1) {
 		CAM_ERR(CAM_ICP, "ICP subdev is already opened");
@@ -95,6 +97,7 @@ static int cam_icp_subdev_open(struct v4l2_subdev *sd,
 	g_icp_dev.open_cnt++;
 end:
 	mutex_unlock(&g_icp_dev.icp_lock);
+	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
 	return rc;
 }
 

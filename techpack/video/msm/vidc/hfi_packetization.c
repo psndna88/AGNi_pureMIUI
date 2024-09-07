@@ -71,6 +71,20 @@ int create_pkt_cmd_sys_init(struct hfi_cmd_sys_init_packet *pkt,
 	return rc;
 }
 
+int create_pkt_cmd_sys_ping(struct hfi_cmd_sys_ping_packet *pkt, u32 sid)
+{
+	int rc = 0;
+
+	if (!pkt)
+		return -EINVAL;
+
+	pkt->size = sizeof(struct hfi_cmd_sys_ping_packet);
+	pkt->packet_type = HFI_CMD_SYS_PING;
+	pkt->sid = sid;
+
+	return rc;
+}
+
 int create_pkt_cmd_sys_pc_prep(struct hfi_cmd_sys_pc_prep_packet *pkt)
 {
 	int rc = 0;
@@ -692,6 +706,7 @@ int create_pkt_cmd_sys_image_version(
 
 static struct hfi_packetization_ops hfi_default = {
 	.sys_init = create_pkt_cmd_sys_init,
+	.sys_ping = create_pkt_cmd_sys_ping,
 	.sys_pc_prep = create_pkt_cmd_sys_pc_prep,
 	.sys_power_control = create_pkt_cmd_sys_power_control,
 	.sys_set_resource = create_pkt_cmd_sys_set_resource,

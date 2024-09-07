@@ -89,6 +89,10 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DDEBUG
 
 
+ifeq ($(TARGET_PRODUCT), $(filter $(TARGET_PRODUCT),renoir))
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_RENOIR
+endif
+
 KBUILD_CPPFLAGS += $(CDEFINES)
 
 # Currently, for versions of gcc which support it, the kernel Makefile

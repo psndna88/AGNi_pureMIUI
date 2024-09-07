@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 /*
  * Copyright 2011, The Android Open Source Project
@@ -141,6 +142,8 @@ static const char *const tdm_gpio_phandle[] = {"qcom,pri-tdm-gpios",
 						"qcom,quin-tdm-gpios"};
 
 static const char *const mclk_gpio_phandle[] = { "qcom,internal-mclk2-gpios" };
+
+static bool mclk_enable_status = false;
 
 enum {
 	TDM_0 = 0,
@@ -659,6 +662,27 @@ static const char *const mi2s_ch_text[] = {"One", "Two", "Three", "Four",
 					   "Eight"};
 static const char *const qos_text[] = {"Disable", "Enable"};
 
+static char const *tdm_pair_rx_format[] = {"PRI_TDM_RX_0", "PRI_TDM_RX_1",
+					   "PRI_TDM_RX_2", "PRI_TDM_RX_3",
+					   "PRI_TDM_RX_4", "PRI_TDM_RX_5",
+					   "PRI_TDM_RX_6", "PRI_TDM_RX_7",
+					   "SEC_TDM_RX_0", "SEC_TDM_RX_1",
+					   "SEC_TDM_RX_2", "SEC_TDM_RX_3",
+					   "SEC_TDM_RX_4", "SEC_TDM_RX_5",
+					   "SEC_TDM_RX_6", "SEC_TDM_RX_7",
+					   "TERT_TDM_RX_0", "TERT_TDM_RX_1",
+					   "TERT_TDM_RX_2", "TERT_TDM_RX_3",
+					   "TERT_TDM_RX_4", "TERT_TDM_RX_5",
+					   "TERT_TDM_RX_6", "TERT_TDM_RX_7",
+					   "QUAT_TDM_RX_0", "QUAT_TDM_RX_1",
+					   "QUAT_TDM_RX_2", "QUAT_TDM_RX_3",
+					   "QUAT_TDM_RX_4", "QUAT_TDM_RX_5",
+					   "QUAT_TDM_RX_6", "QUAT_TDM_RX_7",
+					   "QUIN_TDM_RX_0", "QUIN_TDM_RX_1",
+					   "QUIN_TDM_RX_2", "QUIN_TDM_RX_3",
+					   "QUIN_TDM_RX_4", "QUIN_TDM_RX_5",
+					   "QUIN_TDM_RX_6", "QUIN_TDM_RX_7"};
+
 static SOC_ENUM_SINGLE_EXT_DECL(usb_rx_chs, usb_ch_text);
 static SOC_ENUM_SINGLE_EXT_DECL(usb_tx_chs, usb_ch_text);
 static SOC_ENUM_SINGLE_EXT_DECL(ext_disp_rx_chs, ch_text);
@@ -712,6 +736,7 @@ static SOC_ENUM_SINGLE_EXT_DECL(mi2s_rx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(mi2s_tx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(aux_pcm_rx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(aux_pcm_tx_format, bit_format_text);
+static SOC_ENUM_SINGLE_EXT_DECL(tdm_paired_rx_format, tdm_pair_rx_format);
 
 static struct afe_clk_set internal_mclk[MCLK_MAX] = {
 	{
@@ -720,7 +745,7 @@ static struct afe_clk_set internal_mclk[MCLK_MAX] = {
 		Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ,
 		Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
 		Q6AFE_LPASS_CLK_ROOT_DEFAULT,
-		1,
+		0,
 	}
 };
 
@@ -2122,6 +2147,237 @@ static int tdm_tx_slot_mapping_put(struct snd_kcontrol *kcontrol,
 	return ret;
 }
 
+static int tdm_paired_rx_get(struct snd_kcontrol *kcontrol,
+				    struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+	int mode = tdm_get_mode(kcontrol);
+	/*
+	*mode gets the TDM interface value
+	*0: Primary , 1: secondary, 2: Tertiary, 3: Quaternary, 4: QUINARY
+	*/
+	if (mode < 0) {
+		pr_err("%s: unsupported control: %s\n", __func__, kcontrol->id.name);
+		return -EINVAL;
+	}
+	ucontrol->value.enumerated.item[0] = AFE_PORT_ID_INVALID;
+	pr_debug("%s:Port Channel = %d", __func__, ucontrol->value.enumerated.item[0]);
+	return ret;
+}
+
+static int tdm_paired_rx_put(struct snd_kcontrol *kcontrol,
+				    struct snd_ctl_elem_value *ucontrol)
+{
+	int val = -1;
+	int intf_idx = -1;
+	int port_idx = -1;
+	int index;
+	int slot_array_index = 0;
+	struct afe_tdm_port_config tdm_port;
+	union afe_port_group_config tdm_group;
+	struct afe_param_id_tdm_lane_cfg tdm_lane;
+	int i = 0;
+	int rc = 0;
+	u16 num_bits_set = 0;
+	int mode = tdm_get_mode(kcontrol);
+	struct device_node *node = NULL;
+	const uint32_t *port_id_array = NULL;
+	uint32_t array_length = 0;
+	static u32 num_tdm_group_ports;
+
+	if (mode < 0) {
+		pr_err("%s: unsupported control: %s\n", __func__, kcontrol->id.name);
+		return -EINVAL;
+	} else {
+		memset(&tdm_port, 0, sizeof(tdm_port));
+		memset(&tdm_group, 0, sizeof(tdm_group));
+		memset(&tdm_lane, 0, sizeof(tdm_lane));
+
+		val = ucontrol->value.enumerated.item[0];
+		intf_idx = val / MAX_PORTS_PER_INTF;
+		port_idx = val % MAX_PORTS_PER_INTF;
+		if (mode != intf_idx) {
+			pr_err("%s:Wrong value given for TDM Interface %d", __func__, intf_idx);
+			return -EINVAL;
+		}
+		pr_debug("%s:Port Channel = %d Interface = %d", __func__, port_idx, intf_idx);
+		while (tdm_rx_slot_offset[intf_idx][port_idx][slot_array_index] != AFE_SLOT_MAPPING_OFFSET_INVALID)
+			slot_array_index++;
+		switch (intf_idx) {
+		case TDM_PRI:
+			node = of_find_node_by_path("/soc/qcom,msm-dai-tdm-pri-rx");
+			break;
+		case TDM_SEC:
+			node = of_find_node_by_path("/soc/qcom,msm-dai-tdm-sec-rx");
+			break;
+		case TDM_TERT:
+			node = of_find_node_by_path("/soc/qcom,msm-dai-tdm-tert-rx");
+			break;
+		case TDM_QUAT:
+			node = of_find_node_by_path("/soc/qcom,msm-dai-tdm-quat-rx");
+			break;
+		case TDM_QUIN:
+			node = of_find_node_by_path("/soc/qcom,msm-dai-tdm-quin-rx");
+			break;
+		default:
+			pr_err("%s:Wrong interface present", __func__);
+			return -EINVAL;
+		}
+
+		/* Group Cfg */
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-group-id",(u32 *)&tdm_group.tdm_cfg.group_id);
+		if (rc) {
+			pr_err("%s:Paired Rx Group Id not in DT File %s\n",__func__,"qcom,msm-cpudai-tdm-group-id");
+			return -EINVAL;
+		}
+
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-group-num-ports",&num_tdm_group_ports);
+		if (rc) {
+			pr_err("%s:Paired Rx Group Num Ports from DT file %s\n",__func__, "qcom,msm-cpudai-tdm-group-num-ports");
+			return -EINVAL;
+		}
+		if (num_tdm_group_ports > AFE_GROUP_DEVICE_NUM_PORTS) {
+			pr_err("%s:Paired Rx Group Num Ports %d greater than Max %d\n",__func__, num_tdm_group_ports,
+				AFE_GROUP_DEVICE_NUM_PORTS);
+			return -EINVAL;
+		}
+		/*
+		*Will get the array of afe ports associated with the group id. and then are
+		*converted from big endian to cpu's byte order values using be32_to_cpu function.
+		*/
+		port_id_array = of_get_property(node,"qcom,msm-cpudai-tdm-group-port-id",&array_length);
+		if (port_id_array == NULL) {
+			pr_err("%s:Paired rx port_id_array is not valid\n",__func__);
+			return -EINVAL;
+		}
+		if (array_length != sizeof(uint32_t) * num_tdm_group_ports) {
+			pr_err("%s:paired rx array_length is %d, expected is %zd\n",
+				__func__, array_length,
+				sizeof(uint32_t) * num_tdm_group_ports);
+			return -EINVAL;
+		}
+
+		for (i = 0; i < AFE_GROUP_DEVICE_NUM_PORTS; i++)
+			tdm_group.tdm_cfg.port_id[i] = AFE_PORT_INVALID;
+
+		for (i = 0; i < num_tdm_group_ports; i++) {
+			index = (((u16)be32_to_cpu(port_id_array[i]))/2)% MAX_PORTS_PER_INTF;
+			tdm_group.tdm_cfg.port_id[index] =
+				(u16)be32_to_cpu(port_id_array[i]);
+			pr_debug("%s:Paired rx group port id is 0x%x",__func__,tdm_group.tdm_cfg.port_id[index]);
+		}
+
+		tdm_group.tdm_cfg.group_device_cfg_minor_version = AFE_API_VERSION_GROUP_DEVICE_TDM_CONFIG;
+		tdm_group.tdm_cfg.reserved = 0;
+		tdm_group.tdm_cfg.nslots_per_frame = tdm_slot[intf_idx].num;
+		tdm_group.tdm_cfg.sample_rate = tdm_rx_cfg[intf_idx][port_idx].sample_rate;
+		tdm_group.tdm_cfg.slot_width = tdm_slot[intf_idx].width;
+		tdm_group.tdm_cfg.bit_width = tdm_group.tdm_cfg.slot_width;
+
+		/* Lane Cfg */
+		tdm_lane.port_id = tdm_group.group_cfg.group_id;
+		tdm_lane.lane_mask = AFE_LANE_MASK_INVALID;
+		if (of_find_property(node,"qcom,msm-cpudai-tdm-lane-mask", NULL)) {
+			rc = of_property_read_u16(node,"qcom,msm-cpudai-tdm-lane-mask",&tdm_lane.lane_mask);
+			if (rc) {
+				pr_err("%s: value for tdm lane mask not found %s\n",__func__, "qcom,msm-cpudai-tdm-lane-mask");
+				return -EINVAL;
+			}
+			pr_debug("%s: tdm lane mask from DT file %d\n",__func__, tdm_lane.lane_mask);
+		} else
+			pr_debug("%s: tdm lane mask not found\n", __func__);
+		if (tdm_lane.lane_mask != AFE_LANE_MASK_INVALID) {
+			num_bits_set = num_of_bits_set(tdm_lane.lane_mask);
+			tdm_group.tdm_cfg.num_channels = tdm_group.tdm_cfg.nslots_per_frame * num_bits_set;
+		} else {
+			tdm_group.tdm_cfg.num_channels = tdm_group.tdm_cfg.nslots_per_frame;
+		}
+
+		/* TDM Cfg */
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-sync-mode",(u32 *)&tdm_port.tdm.sync_mode);
+		if (rc) {
+			pr_err("%s:Paired rx Sync Mode from DT file %s\n",__func__, "qcom,msm-cpudai-tdm-sync-mode");
+			return -EINVAL;
+		}
+
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-sync-src",(u32 *)&tdm_port.tdm.sync_src);
+		if (rc) {
+			pr_err("%s:Paired rx Sync Src from DT file %s\n",__func__, "qcom,msm-cpudai-tdm-sync-src");
+			return -EINVAL;
+		}
+
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-data-out",(u32 *)&tdm_port.tdm.ctrl_data_out_enable);
+		if (rc) {
+			pr_err("%s:Paired rx Data Out from DT file %s\n",__func__, "qcom,msm-cpudai-tdm-data-out");
+			return -EINVAL;
+		}
+
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-invert-sync",(u32 *)&tdm_port.tdm.ctrl_invert_sync_pulse);
+		if (rc) {
+			pr_err("%s:Paired rx Invert Sync from DT file %s\n",
+				__func__, "qcom,msm-cpudai-tdm-invert-sync");
+			return -EINVAL;
+		}
+
+		rc = of_property_read_u32(node,"qcom,msm-cpudai-tdm-data-delay",(u32 *)&tdm_port.tdm.ctrl_sync_data_delay);
+		if (rc) {
+			pr_err("%s:Paired rx Data Delay from DT file %s\n",__func__, "qcom,msm-cpudai-tdm-data-delay");
+			return -EINVAL;
+		}
+
+		/* TDM Cfg  */
+		tdm_port.tdm.data_format = AFE_LINEAR_PCM_DATA;
+		tdm_port.tdm.tdm_cfg_minor_version = AFE_API_VERSION_TDM_CONFIG;
+		tdm_port.tdm.num_channels = tdm_rx_cfg[intf_idx][port_idx].channels;
+		tdm_port.tdm.sample_rate = tdm_rx_cfg[intf_idx][port_idx].sample_rate;
+		tdm_port.tdm.bit_width = tdm_slot[intf_idx].width;
+		tdm_port.tdm.nslots_per_frame = tdm_slot[intf_idx].num;
+		tdm_port.tdm.slot_width = tdm_slot[intf_idx].width;
+
+		/* Slot Mapping Cfg */
+		tdm_port.slot_mapping.num_channel = tdm_rx_cfg[intf_idx][port_idx].channels;
+		tdm_port.slot_mapping.bitwidth = tdm_slot[intf_idx].width;
+		tdm_port.slot_mapping.data_align_type = AFE_SLOT_MAPPING_DATA_ALIGN_MSB;
+		tdm_port.slot_mapping.minor_version = AFE_API_VERSION_SLOT_MAPPING_CONFIG;
+
+		/* Slot Mapping v2 Cfg */
+		tdm_port.slot_mapping_v2.num_channel = tdm_rx_cfg[intf_idx][port_idx].channels;
+		tdm_port.slot_mapping_v2.bitwidth = tdm_slot[intf_idx].width;
+		tdm_port.slot_mapping_v2.data_align_type = AFE_SLOT_MAPPING_DATA_ALIGN_MSB;
+		tdm_port.slot_mapping_v2.minor_version = AFE_API_VERSION_SLOT_MAPPING_CONFIG_V2;
+
+		for (i = 0; (i < slot_array_index) && (i < AFE_PORT_MAX_AUDIO_CHAN_CNT); i++)
+			tdm_port.slot_mapping.offset[i] = tdm_rx_slot_offset[intf_idx][port_idx][i];
+
+		for (i = slot_array_index; i < AFE_PORT_MAX_AUDIO_CHAN_CNT ; i++)
+			tdm_port.slot_mapping.offset[i] = AFE_SLOT_MAPPING_OFFSET_INVALID;
+
+		for (i = 0; (i < slot_array_index) && (i < AFE_PORT_MAX_AUDIO_CHAN_CNT_V2) ; i++)
+			tdm_port.slot_mapping_v2.offset[i] = tdm_rx_slot_offset[intf_idx][port_idx][i];
+
+		for (i = slot_array_index; i < AFE_PORT_MAX_AUDIO_CHAN_CNT_V2 ; i++)
+			tdm_port.slot_mapping_v2.offset[i] = AFE_SLOT_MAPPING_OFFSET_INVALID;
+
+		for (i = 0; i < tdm_slot[intf_idx].num ; i++)
+			tdm_port.tdm.slot_mask |= 1 << i;
+
+		tdm_port.custom_tdm_header.minor_version = AFE_API_VERSION_CUSTOM_TDM_HEADER_CONFIG;
+		tdm_port.custom_tdm_header.header_type = AFE_CUSTOM_TDM_HEADER_TYPE_INVALID;
+
+		tdm_group.tdm_cfg.slot_mask = tdm_port.tdm.slot_mask;
+
+		pr_debug("%s:Paired Rx Info\n"
+		 "Group Id: 0x%x, Group Num Ports: 0x%x, Sync Mode: 0x%x\n"
+		 "Sync Src: 0x%x, Data Out: 0x%x, Invert Sync: 0x%x, Data Delay: 0x%x\n",
+		 __func__, tdm_group.tdm_cfg.group_id, num_tdm_group_ports,
+		 tdm_port.tdm.sync_mode, tdm_port.tdm.sync_src,
+		 tdm_port.tdm.ctrl_data_out_enable, tdm_port.tdm.ctrl_invert_sync_pulse,
+		 tdm_port.tdm.ctrl_sync_data_delay);
+		afe_tdm_paired_rx_cfg_val(intf_idx, tdm_group.tdm_cfg.port_id[port_idx], tdm_group, tdm_port, tdm_lane);
+	}
+	return 0;
+}
+
 static int aux_pcm_get_port_idx(struct snd_kcontrol *kcontrol)
 {
 	int idx;
@@ -3325,6 +3581,16 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			msm_aux_pcm_rx_format_get, msm_aux_pcm_rx_format_put),
 	SOC_ENUM_EXT("QUIN_AUX_PCM_TX Format", aux_pcm_tx_format,
 			msm_aux_pcm_tx_format_get, msm_aux_pcm_tx_format_put),
+	SOC_ENUM_EXT("PRI_TDM Paired_Rx", tdm_paired_rx_format,
+			tdm_paired_rx_get, tdm_paired_rx_put),
+	SOC_ENUM_EXT("SEC_TDM Paired_Rx", tdm_paired_rx_format,
+			tdm_paired_rx_get, tdm_paired_rx_put),
+	SOC_ENUM_EXT("TERT_TDM Paired_Rx", tdm_paired_rx_format,
+			tdm_paired_rx_get, tdm_paired_rx_put),
+	SOC_ENUM_EXT("QUAT_TDM Paired_Rx", tdm_paired_rx_format,
+			tdm_paired_rx_get, tdm_paired_rx_put),
+	SOC_ENUM_EXT("QUIN_TDM Paired_Rx", tdm_paired_rx_format,
+			tdm_paired_rx_get, tdm_paired_rx_put),
 };
 
 static inline int param_is_mask(int p)
@@ -3769,7 +4035,8 @@ static int msm_mi2s_set_sclk(struct snd_pcm_substream *substream, bool enable)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int port_id = 0;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 
 	port_id = msm_get_port_id(rtd->dai_link->id);
 	if (port_id < 0) {
@@ -3945,14 +4212,22 @@ static int msm_pinctrl_init(struct platform_device *pdev, enum pinctrl_mode mode
 		pinctrl_info->pinctrl = pinctrl;
 
 		/* get all the states handles from Device Tree */
-		pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
-			"sleep");
+		if (mode == TDM_PINCTRL)
+			pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
+				"default");
+		else
+			pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
+                                "sleep");
 		if (IS_ERR(pinctrl_info->sleep)) {
 			pr_err("%s: could not get sleep pin state\n", __func__);
 			goto err;
 		}
-		pinctrl_info->active = pinctrl_lookup_state(pinctrl,
-			"default");
+		if (mode == TDM_PINCTRL)
+			pinctrl_info->active = pinctrl_lookup_state(pinctrl,
+				"active");
+		else
+			pinctrl_info->active = pinctrl_lookup_state(pinctrl,
+                                "default");
 		if (IS_ERR(pinctrl_info->active)) {
 			pr_err("%s: could not get active pin state\n",
 				__func__);
@@ -3980,7 +4255,7 @@ static int msm_pinctrl_init(struct platform_device *pdev, enum pinctrl_mode mode
 				ret = -EIO;
 				goto err;
 			}
-
+			mclk_enable_status = true;
 			ret = pinctrl_select_state(pinctrl_info->pinctrl, pinctrl_info->active);
 			if (ret != 0) {
 				pr_err("%s: set pin state to active failed with %d\n",
@@ -4920,8 +5195,11 @@ static int sa6155_tdm_snd_startup(struct snd_pcm_substream *substream)
 	 */
 	intf_conf = &pdata->tdm_intf_conf[index];
 	mutex_lock(&intf_conf->lock);
+
+	pr_debug("%s: intf_conf->ref_cnt = %d, index = %d\n", __func__, intf_conf->ref_cnt, index);
+
 	if (++intf_conf->ref_cnt == 1) {
-		if (index == TDM_TERT || index == TDM_QUAT ||
+		if (index == TDM_TERT || index == TDM_QUAT || index == TDM_SEC ||
 			index == TDM_QUIN) {
 			pinctrl_info = &pdata->pinctrl_info[index];
 			if (pinctrl_info->pinctrl) {
@@ -4930,6 +5208,8 @@ static int sa6155_tdm_snd_startup(struct snd_pcm_substream *substream)
 				if (ret_pinctrl)
 					pr_err("%s: TDM TLMM pinctrl set failed with %d\n",
 						__func__, ret_pinctrl);
+			} else {
+				pr_err("%s: No set_pinctrl entity for [%d]...\n", __func__, index);
 			}
 		}
 	}
@@ -4999,7 +5279,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 	unsigned int fmt = SND_SOC_DAIFMT_CBS_CFS;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
@@ -5028,23 +5309,14 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	mutex_lock(&intf_conf->lock);
 	if (++intf_conf->ref_cnt == 1) {
 		/* Check if msm needs to provide the clock to the interface */
-		if (!intf_conf->msm_is_mi2s_master) {
+		if (!intf_conf->msm_is_mi2s_master)
 			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
-			fmt = SND_SOC_DAIFMT_CBM_CFM;
-		}
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
 				"%s: afe lpass clock failed to enable MI2S clock, err:%d\n",
 				__func__, ret);
 			goto clean_up;
-		}
-
-		ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
-		if (ret < 0) {
-			pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
-				__func__, index, ret);
-			goto clk_off;
 		}
 
 		pinctrl_info = &pdata->pinctrl_info[index];
@@ -5055,6 +5327,14 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 				pr_err("%s: MI2S TLMM pinctrl set failed with %d\n",
 					__func__, ret_pinctrl);
 		}
+	}
+	if (!intf_conf->msm_is_mi2s_master)
+		fmt = SND_SOC_DAIFMT_CBM_CFM;
+	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
+	if (ret < 0) {
+		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
+			__func__, index, ret);
+		goto clk_off;
 	}
 clk_off:
 	if (ret < 0)
@@ -5071,7 +5351,8 @@ static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
 	int ret;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	int index = rtd->cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (rtd->cpu_dai->id) / 2;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	struct msm_pinctrl_info *pinctrl_info = NULL;
@@ -5157,7 +5438,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOICEMMODE1,
-		SND_SOC_DAILINK_REG(voicemmode1),
+		SND_SOC_DAILINK_REG(voicemmode1_hostless),
 	},
 	{
 		.name = "MSM VoIP",
@@ -5171,7 +5452,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		/* this dainlink has playback support */
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOIP,
-		SND_SOC_DAILINK_REG(msmvoip),
+		SND_SOC_DAILINK_REG(msmvoip_hostless),
 	},
 	{
 		.name = MSM_DAILINK_NAME(ULL),
@@ -5339,7 +5620,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOICEMMODE2,
-		SND_SOC_DAILINK_REG(voicemmode2),
+		SND_SOC_DAILINK_REG(voicemmode2_hostless),
 	},
 	/* LSM FE */
 	{
@@ -7288,12 +7569,25 @@ static int sa6155_ssr_enable(struct device *dev, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	int ret = 0;
+	int ret = 0, i;
 
 	if (!card) {
 		dev_err(dev, "%s: card is NULL\n", __func__);
 		ret = -EINVAL;
 		goto err;
+	}
+
+	if (mclk_enable_status == true) {
+		for (i = 0; i < MCLK_MAX; i++) {
+			ret = afe_set_lpass_clock_v2(AFE_PORT_ID_TDM_PORT_RANGE_START,
+			&internal_mclk[i]);
+			if (ret < 0) {
+				pr_err("%s: afe lpass clock failed to enable clock, err:%d\n",
+					__func__, ret);
+				ret = -EIO;
+				goto err;
+			}
+		}
 	}
 
 	dev_info(dev, "%s: setting snd_card to ONLINE\n", __func__);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _WCD938X_INTERNAL_H
@@ -110,6 +111,7 @@ struct wcd938x_priv {
 	/* wcd to swr dmic notification */
 	bool notify_swr_dmic;
 	struct blocking_notifier_head notifier;
+	int micb_enabled[WCD938X_MAX_MICBIAS];
 };
 
 struct wcd938x_micbias_setting {

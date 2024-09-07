@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -1478,7 +1479,7 @@ static int wcd_spi_component_bind(struct device *dev,
 	spi_message_add_tail(&wcd_spi->xfer2[1], &wcd_spi->msg2);
 
 	/* Pre-allocate the buffers */
-	wcd_spi->tx_buf = dma_zalloc_coherent(&spi->dev,
+	wcd_spi->tx_buf = dma_alloc_coherent(&spi->dev,
 					      WCD_SPI_RW_MAX_BUF_SIZE,
 					      &wcd_spi->tx_dma, GFP_KERNEL);
 	if (!wcd_spi->tx_buf) {
@@ -1486,7 +1487,7 @@ static int wcd_spi_component_bind(struct device *dev,
 		goto done;
 	}
 
-	wcd_spi->rx_buf = dma_zalloc_coherent(&spi->dev,
+	wcd_spi->rx_buf = dma_alloc_coherent(&spi->dev,
 					      WCD_SPI_RW_MAX_BUF_SIZE,
 					      &wcd_spi->rx_dma, GFP_KERNEL);
 	if (!wcd_spi->rx_buf) {

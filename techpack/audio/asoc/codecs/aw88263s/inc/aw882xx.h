@@ -129,6 +129,7 @@ struct aw882xx {
 	unsigned char allow_pw;		/* allow power */
 	int reset_gpio;
 	int irq_gpio;
+	int spk_sw_gpio;
 	unsigned int chip_id;
 	unsigned char fw_status;
 	unsigned char fw_retry_cnt;

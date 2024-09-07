@@ -18,7 +18,7 @@ struct a5_ubwc_cfg_ext {
 };
 
 struct a5_soc_info {
-	char *fw_name;
+	const char *fw_name;
 	bool ubwc_config_ext;
 	uint32_t a5_qos_val;
 	union {

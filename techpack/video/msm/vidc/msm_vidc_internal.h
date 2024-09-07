@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _MSM_VIDC_INTERNAL_H_
@@ -39,6 +39,7 @@
 #define MAX_NUM_OUTPUT_BUFFERS VIDEO_MAX_FRAME // same as VB2_MAX_FRAME
 
 #define MAX_SUPPORTED_INSTANCES 16
+#define MAX_SUPPORTED_INSTANCES_24 24
 #define MAX_BSE_VPP_DELAY 6
 #define DEFAULT_BSE_VPP_DELAY 2
 
@@ -310,6 +311,7 @@ struct msm_vidc_platform_data {
 	uint32_t vpu_ver;
 	uint32_t num_vpp_pipes;
 	struct msm_vidc_ubwc_config_data *ubwc_config;
+	uint32_t max_inst_count;
 };
 
 struct msm_vidc_format_desc {
@@ -336,6 +338,13 @@ struct msm_vidc_format_constraint {
 	u32 uv_buffer_alignment;
 };
 
+struct log_cookie {
+	u32 used;
+	u32 session_type;
+	u32 codec_type;
+	char name[20];
+};
+
 struct msm_vidc_drv {
 	struct mutex lock;
 	struct list_head cores;
@@ -343,6 +352,8 @@ struct msm_vidc_drv {
 	struct dentry *debugfs_root;
 	int thermal_level;
 	u32 sku_version;
+	struct log_cookie *ctxt;
+	u32 num_ctxt;
 };
 
 struct msm_video_device {
@@ -497,6 +508,7 @@ struct msm_vidc_core {
 	unsigned long min_freq;
 	unsigned long curr_freq;
 	struct msm_vidc_core_ops *core_ops;
+	bool pm_suspended;
 };
 
 struct msm_vidc_inst;

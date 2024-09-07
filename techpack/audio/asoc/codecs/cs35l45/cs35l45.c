@@ -10,6 +10,7 @@
 #define DEBUG
 
 //#define MDSYNC_CS
+//#define FAST_SWITCH_DEBUG
 #define FAST_SWITCH_WORKAROUND
 
 #include <linux/module.h>
@@ -1919,7 +1920,9 @@ static int cs35l45_component_probe(struct snd_soc_component *component)
 	struct snd_soc_dapm_context *dapm =
 			snd_soc_component_get_dapm(component);
 	int ret;
+	char widget[32];
 
+	dev_dbg(cs35l45->dev, "%s: name_prefix=%s\n", __func__, component->name_prefix);
 	cs35l45->dapm_mode = DAPM_MODE_ASP;
 
 	snd_soc_dapm_add_routes(dapm, cs35l45_asp_routes,
@@ -1928,6 +1931,111 @@ static int cs35l45_component_probe(struct snd_soc_component *component)
 	snd_soc_component_disable_pin(component, "RCV");
 	snd_soc_component_disable_pin(component, "DSP1 Enable");
 	cs35l45->dsp1_enable_pin = 0;
+	if (component->name_prefix) {
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "Capture");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "Playback");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "DSP1 Slave");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "DSP1 Master");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "GLOBAL_EN");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASPTX Ref");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "VMON");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "IMON");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "BATTMON");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "BSTMON");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "RCV_EN");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_RX1");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_RX2");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX1");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX2");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX3");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX4");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX1 Source");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX2 Source");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX3 Source");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "ASP_TX4 Source");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "AMP Enable");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "AMP PWR Enable");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "NGATE_CH1");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "NGATE_CH2");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "BBPE Enable");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "NFR Enable");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "NGATE Enable");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "Exit");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "Entry");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "SPK");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "RCV");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+		snprintf(widget, sizeof(widget), "%s %s", component->name_prefix, "AP");
+		snd_soc_dapm_ignore_suspend(dapm, widget);
+	} else {
+		snd_soc_dapm_ignore_suspend(dapm, "Capture");
+		snd_soc_dapm_ignore_suspend(dapm, "Playback");
+		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Slave");
+		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Master");
+		snd_soc_dapm_ignore_suspend(dapm, "GLOBAL_EN");
+		snd_soc_dapm_ignore_suspend(dapm, "ASPTX Ref");
+		snd_soc_dapm_ignore_suspend(dapm, "VMON");
+		snd_soc_dapm_ignore_suspend(dapm, "IMON");
+		snd_soc_dapm_ignore_suspend(dapm, "BATTMON");
+		snd_soc_dapm_ignore_suspend(dapm, "BSTMON");
+		snd_soc_dapm_ignore_suspend(dapm, "RCV_EN");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_RX1");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_RX2");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX1");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX2");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX3");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX4");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX1 Source");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX2 Source");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX3 Source");
+		snd_soc_dapm_ignore_suspend(dapm, "ASP_TX4 Source");
+		snd_soc_dapm_ignore_suspend(dapm, "AMP Enable");
+		snd_soc_dapm_ignore_suspend(dapm, "AMP PWR Enable");
+		snd_soc_dapm_ignore_suspend(dapm, "NGATE_CH1");
+		snd_soc_dapm_ignore_suspend(dapm, "NGATE_CH2");
+		snd_soc_dapm_ignore_suspend(dapm, "BBPE Enable");
+		snd_soc_dapm_ignore_suspend(dapm, "NFR Enable");
+		snd_soc_dapm_ignore_suspend(dapm, "NGATE Enable");
+		snd_soc_dapm_ignore_suspend(dapm, "Exit");
+		snd_soc_dapm_ignore_suspend(dapm, "Entry");
+		snd_soc_dapm_ignore_suspend(dapm, "SPK");
+		snd_soc_dapm_ignore_suspend(dapm, "RCV");
+		snd_soc_dapm_ignore_suspend(dapm, "AP");
+	}
 
 	snd_soc_dapm_sync(dapm);
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -18,7 +19,6 @@
 #include "cam_sync_api.h"
 #include "cam_trace.h"
 #include "cam_debug_util.h"
-#include "cam_cpas_api.h"
 
 static uint cam_debug_ctx_req_list;
 module_param(cam_debug_ctx_req_list, uint, 0644);
@@ -108,8 +108,6 @@ int cam_context_buf_done_from_hw(struct cam_context *ctx,
 		CAM_INFO(CAM_CTXT,
 			"[%s][%d] : Moving req[%llu] from active_list to free_list",
 			ctx->dev_name, ctx->ctx_id, req->request_id);
-
-	cam_cpas_notify_event(ctx->ctx_id_string, req->request_id);
 
 	/*
 	 * another thread may be adding/removing from free list,
@@ -319,6 +317,7 @@ int32_t cam_context_config_dev_to_hw(
 		rc = -EFAULT;
 	}
 
+	cam_mem_put_cpu_buf((int32_t) cmd->packet_handle);
 	return rc;
 }
 
@@ -380,6 +379,7 @@ int32_t cam_context_prepare_dev_to_hw(struct cam_context *ctx,
 	if ((len < sizeof(struct cam_packet)) ||
 		(cmd->offset >= (len - sizeof(struct cam_packet)))) {
 		CAM_ERR(CAM_CTXT, "Not enough buf");
+		cam_mem_put_cpu_buf((int32_t) cmd->packet_handle);
 		return -EINVAL;
 
 	}
@@ -460,6 +460,9 @@ int32_t cam_context_prepare_dev_to_hw(struct cam_context *ctx,
 			rc = cam_sync_check_valid(
 				req->in_map_entries[j].sync_id);
 			if (rc) {
+				spin_lock(&ctx->lock);
+				list_del_init(&req->list);
+				spin_unlock(&ctx->lock);
 				CAM_ERR(CAM_CTXT,
 					"invalid in map sync object %d",
 					req->in_map_entries[j].sync_id);
@@ -495,7 +498,7 @@ int32_t cam_context_prepare_dev_to_hw(struct cam_context *ctx,
 				req->in_map_entries[j].sync_id, rc);
 		}
 	}
-
+	cam_mem_put_cpu_buf((int32_t) cmd->packet_handle);
 	return rc;
 put_ref:
 	for (--i; i >= 0; i--) {
@@ -509,6 +512,7 @@ free_req:
 	req->ctx = NULL;
 	spin_unlock(&ctx->lock);
 
+	cam_mem_put_cpu_buf((int32_t) cmd->packet_handle);
 	return rc;
 }
 
@@ -554,7 +558,6 @@ int32_t cam_context_acquire_dev_to_hw(struct cam_context *ctx,
 
 	/* fill in parameters */
 	param.context_data = ctx;
-	param.ctx_id = ctx->ctx_id;
 	param.event_cb = ctx->irq_cb_intf;
 	param.num_acq = cmd->num_resources;
 	param.acquire_info = cmd->resource_hdl;
@@ -569,13 +572,6 @@ int32_t cam_context_acquire_dev_to_hw(struct cam_context *ctx,
 	}
 
 	ctx->ctxt_to_hw_map = param.ctxt_to_hw_map;
-	ctx->hw_mgr_ctx_id = param.hw_mgr_ctx_id;
-
-	snprintf(ctx->ctx_id_string, sizeof(ctx->ctx_id_string),
-		"%s_ctx[%d]_hwmgrctx[%d]_Done",
-		ctx->dev_name,
-		ctx->ctx_id,
-		ctx->hw_mgr_ctx_id);
 
 	/* if hw resource acquire successful, acquire dev handle */
 	req_hdl_param.session_hdl = cmd->session_handle;
@@ -1009,7 +1005,7 @@ end:
 }
 
 int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
-	struct cam_packet *packet, bool *mem_found, bool *ctx_found,
+	struct cam_hw_mgr_dump_pf_data *pf_data, bool *mem_found, bool *ctx_found,
 	uint32_t  *resource_type, struct cam_smmu_pf_info *pf_info)
 {
 	int rc = 0;
@@ -1031,7 +1027,7 @@ int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
 	if (ctx->hw_mgr_intf->hw_cmd) {
 		cmd_args.ctxt_to_hw_map = ctx->ctxt_to_hw_map;
 		cmd_args.cmd_type = CAM_HW_MGR_CMD_DUMP_PF_INFO;
-		cmd_args.u.pf_args.pf_data.packet = packet;
+		cmd_args.u.pf_args.pf_data = *pf_data;
 		cmd_args.u.pf_args.iova = pf_info->iova;
 		cmd_args.u.pf_args.buf_info = pf_info->buf_info;
 		cmd_args.u.pf_args.mem_found = mem_found;
@@ -1117,6 +1113,7 @@ static int cam_context_dump_context(struct cam_context *ctx,
 	if (dump_args->offset >= buf_len) {
 		CAM_WARN(CAM_CTXT, "dump buffer overshoot offset %zu len %zu",
 			dump_args->offset, buf_len);
+		cam_mem_put_cpu_buf(dump_args->buf_handle);
 		return -ENOSPC;
 	}
 
@@ -1128,6 +1125,7 @@ static int cam_context_dump_context(struct cam_context *ctx,
 	if (remain_len < min_len) {
 		CAM_WARN(CAM_CTXT, "dump buffer exhaust remain %zu min %u",
 			remain_len, min_len);
+		cam_mem_put_cpu_buf(dump_args->buf_handle);
 		return -ENOSPC;
 	}
 	dst = (uint8_t *)cpu_addr + dump_args->offset;
@@ -1152,7 +1150,8 @@ static int cam_context_dump_context(struct cam_context *ctx,
 	hdr->size = hdr->word_size * (addr - start);
 	dump_args->offset += hdr->size +
 		sizeof(struct cam_context_dump_header);
-	return rc;
+	cam_mem_put_cpu_buf(dump_args->buf_handle);
+	return 0;
 }
 
 int32_t cam_context_dump_dev_to_hw(struct cam_context *ctx,

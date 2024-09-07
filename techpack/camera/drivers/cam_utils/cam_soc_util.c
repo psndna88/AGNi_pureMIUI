@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/of.h>
@@ -313,6 +315,32 @@ static int cam_soc_util_get_clk_level_to_apply(
 	return 0;
 }
 
+unsigned long cam_soc_util_get_clk_rate_applied(
+	struct cam_hw_soc_info *soc_info, int32_t index, bool is_src,
+	enum cam_vote_level clk_level)
+{
+	unsigned long clk_rate = 0;
+	struct clk *clk = NULL;
+	int rc = 0;
+	enum cam_vote_level apply_level;
+
+	if (is_src) {
+		clk = soc_info->clk[index];
+		clk_rate = clk_get_rate(clk);
+	}
+	else {
+		rc = cam_soc_util_get_clk_level_to_apply(soc_info, clk_level,
+			&apply_level);
+		if (rc)
+			return rc;
+		if(soc_info->clk_rate[apply_level][index] > 0) {
+				clk = soc_info->clk[index];
+				clk_rate = clk_get_rate(clk);
+		}
+	}
+	return clk_rate;
+}
+
 int cam_soc_util_irq_enable(struct cam_hw_soc_info *soc_info)
 {
 	if (!soc_info) {
@@ -347,6 +375,23 @@ int cam_soc_util_irq_disable(struct cam_hw_soc_info *soc_info)
 	return 0;
 }
 
+int cam_soc_util_get_clk_rate(struct clk *clk, const char *clk_name,
+	uint32_t *clk_rate)
+{
+	uint32_t clk_rate_round;
+
+	clk_rate_round = clk_get_rate(clk);
+	if (clk_rate_round < 0) {
+		CAM_ERR(CAM_UTIL, "get_rate failed on %s", clk_name);
+		return clk_rate_round;
+	}
+
+	*clk_rate = clk_rate_round;
+	CAM_DBG(CAM_UTIL, "get rate %lld on %s", *clk_rate, clk_name);
+
+	return 0;
+}
+
 long cam_soc_util_get_clk_round_rate(struct cam_hw_soc_info *soc_info,
 	uint32_t clk_index, unsigned long clk_rate)
 {
@@ -362,19 +407,20 @@ long cam_soc_util_get_clk_round_rate(struct cam_hw_soc_info *soc_info,
 /**
  * cam_soc_util_set_clk_rate()
  *
- * @brief:          Sets the given rate for the clk requested for
+ * @brief:            Sets the given rate for the clk requested for
  *
- * @clk:            Clock structure information for which rate is to be set
- * @clk_name:       Name of the clock for which rate is being set
- * @clk_rate        Clock rate to be set
+ * @clk:              Clock structure information for which rate is to be set
+ * @clk_name:         Name of the clock for which rate is being set
+ * @clk_rate:         Clock rate to be set
+ * @applied_clk_rate: Final clock rate set to the clk
  *
  * @return:         Success or failure
  */
 static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
-	int64_t clk_rate)
+	int64_t clk_rate, unsigned long *applied_clk_rate)
 {
 	int rc = 0;
-	long clk_rate_round;
+	long clk_rate_round = -1;
 
 	if (!clk || !clk_name)
 		return -EINVAL;
@@ -410,6 +456,9 @@ static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
 			return rc;
 		}
 	}
+
+	if (applied_clk_rate)
+		*applied_clk_rate = clk_rate_round;
 
 	return rc;
 }
@@ -459,7 +508,8 @@ int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
 	}
 
 	rc = cam_soc_util_set_clk_rate(clk,
-		soc_info->clk_name[src_clk_idx], clk_rate);
+		soc_info->clk_name[src_clk_idx], clk_rate,
+		&soc_info->applied_src_clk_rate);
 	if (rc) {
 		CAM_ERR(CAM_UTIL,
 			"SET_RATE Failed: src clk: %s, rate %lld, dev_name = %s rc: %d",
@@ -479,7 +529,8 @@ int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
 		clk = soc_info->clk[scl_clk_idx];
 		rc = cam_soc_util_set_clk_rate(clk,
 			soc_info->clk_name[scl_clk_idx],
-			soc_info->clk_rate[apply_level][scl_clk_idx]);
+			soc_info->clk_rate[apply_level][scl_clk_idx],
+			NULL);
 		if (rc) {
 			CAM_WARN(CAM_UTIL,
 			"SET_RATE Failed: scl clk: %s, rate %d dev_name = %s, rc: %d",
@@ -586,14 +637,15 @@ int cam_soc_util_get_option_clk_by_name(struct cam_hw_soc_info *soc_info,
 }
 
 int cam_soc_util_clk_enable(struct clk *clk, const char *clk_name,
-	int32_t clk_rate)
+	int32_t clk_rate, unsigned long *applied_clock_rate)
 {
 	int rc = 0;
 
 	if (!clk || !clk_name)
 		return -EINVAL;
 
-	rc = cam_soc_util_set_clk_rate(clk, clk_name, clk_rate);
+	rc = cam_soc_util_set_clk_rate(clk, clk_name, clk_rate,
+		applied_clock_rate);
 	if (rc)
 		return rc;
 
@@ -631,8 +683,9 @@ int cam_soc_util_clk_disable(struct clk *clk, const char *clk_name)
 int cam_soc_util_clk_enable_default(struct cam_hw_soc_info *soc_info,
 	enum cam_vote_level clk_level)
 {
-	int i, rc = 0;
-	enum cam_vote_level apply_level;
+	int                          i, rc = 0;
+	enum cam_vote_level          apply_level;
+	unsigned long                applied_clk_rate;
 
 	if ((soc_info->num_clk == 0) ||
 		(soc_info->num_clk >= CAM_SOC_MAX_CLK)) {
@@ -652,9 +705,14 @@ int cam_soc_util_clk_enable_default(struct cam_hw_soc_info *soc_info,
 	for (i = 0; i < soc_info->num_clk; i++) {
 		rc = cam_soc_util_clk_enable(soc_info->clk[i],
 			soc_info->clk_name[i],
-			soc_info->clk_rate[apply_level][i]);
+			soc_info->clk_rate[apply_level][i],
+			&applied_clk_rate);
 		if (rc)
 			goto clk_disable;
+
+		if (i == soc_info->src_clk_idx)
+			soc_info->applied_src_clk_rate = applied_clk_rate;
+
 		if (soc_info->cam_cx_ipeak_enable) {
 			CAM_DBG(CAM_UTIL,
 			"dev name = %s clk name = %s idx = %d\n"
@@ -912,6 +970,7 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 {
 	int i, rc = 0;
 	enum cam_vote_level apply_level;
+	unsigned long applied_clk_rate;
 
 	if ((soc_info->num_clk == 0) ||
 		(soc_info->num_clk >= CAM_SOC_MAX_CLK)) {
@@ -941,7 +1000,8 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 
 		rc = cam_soc_util_set_clk_rate(soc_info->clk[i],
 			soc_info->clk_name[i],
-			soc_info->clk_rate[apply_level][i]);
+			soc_info->clk_rate[apply_level][i],
+			&applied_clk_rate);
 		if (rc < 0) {
 			CAM_DBG(CAM_UTIL,
 				"dev name = %s clk_name = %s idx = %d\n"
@@ -952,6 +1012,9 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 				cam_cx_ipeak_update_vote_cx_ipeak(soc_info, 0);
 			break;
 		}
+
+		if (i == soc_info->src_clk_idx)
+			soc_info->applied_src_clk_rate = applied_clk_rate;
 	}
 
 	return rc;
@@ -1385,6 +1448,12 @@ int cam_soc_util_regulator_disable(struct regulator *rgltr,
 	else if (rgltr_delay_ms)
 		usleep_range(rgltr_delay_ms * 1000,
 			(rgltr_delay_ms * 1000) + 1000);
+	else if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
+		CAM_DBG(CAM_UTIL, "need wait 1ms for AF regulator hardware disabling");
+		if (!strcmp(rgltr_name,"cam_vaf")) //just for L11C OCP(K11)
+			usleep_range(1000,2000);
+	}
+
 	if (regulator_count_voltages(rgltr) > 0) {
 		regulator_set_load(rgltr, 0);
 		regulator_set_voltage(rgltr, 0, rgltr_max_volt);
@@ -2021,8 +2090,7 @@ static int cam_soc_util_dump_dmi_reg_range_user_buf(
 		CAM_ERR(CAM_UTIL,
 			"Invalid input args soc_info: %pK, dump_args: %pK",
 			soc_info, dump_args);
-		rc = -EINVAL;
-		goto end;
+		return -EINVAL;
 	}
 
 	if (dmi_read->num_pre_writes > CAM_REG_DUMP_DMI_CONFIG_MAX ||
@@ -2030,15 +2098,14 @@ static int cam_soc_util_dump_dmi_reg_range_user_buf(
 		CAM_ERR(CAM_UTIL,
 			"Invalid number of requested writes, pre: %d post: %d",
 			dmi_read->num_pre_writes, dmi_read->num_post_writes);
-		rc = -EINVAL;
-		goto end;
+		return -EINVAL;
 	}
 
 	rc = cam_mem_get_cpu_buf(dump_args->buf_handle, &cpu_addr, &buf_len);
 	if (rc) {
 		CAM_ERR(CAM_UTIL, "Invalid handle %u rc %d",
 			dump_args->buf_handle, rc);
-		goto end;
+		return -EINVAL;
 	}
 
 	if (buf_len <= dump_args->offset) {
@@ -2124,6 +2191,8 @@ static int cam_soc_util_dump_dmi_reg_range_user_buf(
 		sizeof(struct cam_hw_soc_dump_header);
 
 end:
+	if (dump_args)
+		cam_mem_put_cpu_buf(dump_args->buf_handle);
 	return rc;
 }
 
@@ -2148,13 +2217,13 @@ static int cam_soc_util_dump_cont_reg_range_user_buf(
 			"Invalid input args soc_info: %pK, dump_out_buffer: %pK reg_read: %pK",
 			soc_info, dump_args, reg_read);
 		rc = -EINVAL;
-		goto end;
+		return rc;
 	}
 	rc = cam_mem_get_cpu_buf(dump_args->buf_handle, &cpu_addr, &buf_len);
 	if (rc) {
 		CAM_ERR(CAM_UTIL, "Invalid handle %u rc %d",
 			dump_args->buf_handle, rc);
-		goto end;
+		return rc;
 	}
 	if (buf_len <= dump_args->offset) {
 		CAM_WARN(CAM_UTIL, "Dump offset overshoot %zu %zu",
@@ -2204,6 +2273,8 @@ static int cam_soc_util_dump_cont_reg_range_user_buf(
 	dump_args->offset +=  hdr->size +
 		sizeof(struct cam_hw_soc_dump_header);
 end:
+	if (dump_args)
+		cam_mem_put_cpu_buf(dump_args->buf_handle);
 	return rc;
 }
 
@@ -2295,6 +2366,8 @@ int cam_soc_util_reg_dump_to_cmd_buf(void *ctx,
 	if (rc || !cpu_addr || (buf_size == 0)) {
 		CAM_ERR(CAM_UTIL, "Failed in Get cpu addr, rc=%d, cpu_addr=%pK",
 			rc, (void *)cpu_addr);
+		if (rc)
+			return rc;
 		goto end;
 	}
 
@@ -2496,6 +2569,7 @@ int cam_soc_util_reg_dump_to_cmd_buf(void *ctx,
 	}
 
 end:
+	cam_mem_put_cpu_buf(cmd_desc->mem_handle);
 	return rc;
 }
 

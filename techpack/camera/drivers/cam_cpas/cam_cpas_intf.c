@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -18,6 +18,7 @@
 #include "cam_cpas_hw_intf.h"
 #include "cam_cpas_soc.h"
 #include "camera_main.h"
+#include "cam_cpas_api.h"
 
 #define CAM_CPAS_DEV_NAME    "cam-cpas"
 #define CAM_CPAS_INTF_INITIALIZED() (g_cpas_intf && g_cpas_intf->probe_done)
@@ -161,19 +162,14 @@ bool cam_cpas_is_feature_supported(uint32_t flag, uint32_t hw_map,
 		if (soc_private->feature_info[i].feature == flag)
 			break;
 
-	if (i == soc_private->num_feature_info) {
-		CAM_INFO(CAM_CPAS, "Feature not found, no of featues: %d",
-			soc_private->num_feature_info);
+	if (i == soc_private->num_feature_info)
 		goto end;
-	}
 
 	if (soc_private->feature_info[i].type == CAM_CPAS_FEATURE_TYPE_DISABLE
 		|| (soc_private->feature_info[i].type ==
 		CAM_CPAS_FEATURE_TYPE_ENABLE)) {
 		if ((soc_private->feature_info[i].hw_map & hw_map) == hw_map)
 			supported = soc_private->feature_info[i].enable;
-		else
-			supported = !soc_private->feature_info[i].enable;
 	} else {
 		if (!fuse_val) {
 			CAM_ERR(CAM_CPAS,
@@ -212,6 +208,25 @@ int cam_cpas_get_cpas_hw_version(uint32_t *hw_version)
 	}
 
 	return 0;
+}
+
+int cam_cpas_get_camnoc_fifo_fill_level_info(
+	uint32_t cpas_version,
+	uint32_t client_handle)
+{
+	int rc = 0;
+
+	if (!CAM_CPAS_INTF_INITIALIZED()) {
+		CAM_ERR(CAM_CPAS, "cpas intf not initialized");
+		return -ENODEV;
+	}
+
+	rc = cam_cpas_hw_get_camnoc_fill_level_info(cpas_version,
+		client_handle);
+	if (rc)
+		CAM_ERR(CAM_CPAS, "Failed to dump fifo reg rc %d", rc);
+
+	return rc;
 }
 
 int cam_cpas_get_hw_info(uint32_t *camera_family,

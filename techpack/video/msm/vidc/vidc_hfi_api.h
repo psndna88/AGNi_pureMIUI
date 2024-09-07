@@ -257,6 +257,7 @@ enum hal_capability {
 	CAP_HEIC_IMAGE_FRAME_HEIGHT,
 	CAP_H264_LEVEL,
 	CAP_HEVC_LEVEL,
+	CAP_VP9_LEVEL,
 	CAP_MAX,
 };
 
@@ -423,7 +424,7 @@ enum hal_command_response {
 	HAL_SYS_SET_RESOURCE_DONE,
 	HAL_SYS_RELEASE_RESOURCE_DONE,
 	HAL_SYS_PC_PREP_DONE,
-	HAL_SYS_IDLE,
+	HAL_SYS_PING_ACK,
 	HAL_SYS_DEBUG,
 	HAL_SYS_WATCHDOG_TIMEOUT,
 	HAL_SYS_ERROR,
@@ -635,6 +636,7 @@ struct hfi_device {
 
 	/*Add function pointers for all the hfi functions below*/
 	int (*core_init)(void *device);
+	int (*core_ping)(void *device, u32 sid);
 	int (*core_release)(void *device);
 	int (*core_trigger_ssr)(void *device,
 		enum hal_ssr_trigger_type ssr_type, u32 sub_client_id,

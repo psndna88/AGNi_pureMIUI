@@ -26,6 +26,15 @@ LINUXINCLUDE    += -include $(srctree)/techpack/video/config/litovidconf.h
 endif
 endif
 
+# auto-detect subdirs
+ifeq ($(CONFIG_ARCH_SCUBA), y)
+include $(srctree)/techpack/video/config/scubavid.conf
+endif
+
+ifeq ($(CONFIG_ARCH_SCUBA), y)
+LINUXINCLUDE    += -include $(srctree)/techpack/video/config/scubavidconf.h
+endif
+
 LINUXINCLUDE    += -I$(srctree)/techpack/video/include \
                    -I$(srctree)/techpack/video/include/uapi
 
