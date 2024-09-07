@@ -12,6 +12,7 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/component.h>
+#include <linux/mmhardware_sysfs.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
 #include <soc/soundwire.h>
@@ -4307,6 +4308,10 @@ static int wcd938x_bind(struct device *dev)
 	}
 	wcd938x->dev_up = true;
 
+	/* register codec hardware */
+#ifdef CONFIG_MMHARDWARE_DETECTION
+	register_kobj_under_mmsysfs(MM_HW_CODEC, MM_HARDWARE_SYSFS_CODEC_FOLDER);
+#endif
 	return ret;
 err_irq:
 	wcd_irq_exit(&wcd938x->irq_info, wcd938x->virq);

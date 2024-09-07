@@ -270,6 +270,8 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-D__linux__
 
 CDEFINES += -DCONFIG_TARGET_PRODUCT_CS35L41_TDM
+CDEFINES += -DCONFIG_TARGET_PRODUCT_HAYDN
+CDEFINES += -DCONFIG_MIUS_PROXIMITY
 
 KBUILD_CPPFLAGS += $(CDEFINES)
 
@@ -285,6 +287,8 @@ endif
 ifeq ($(call cc-option-yn, -Wheader-guard),y)
 EXTRA_CFLAGS += -Wheader-guard
 endif
+
+EXTRA_CFLAGS += -Wno-unused-variable
 
 ifeq ($(KERNEL_BUILD), 0)
 KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/dsp/Module.symvers
