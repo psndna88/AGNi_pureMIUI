@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.233 Kernel Configuration
+# Linux/arm64 5.4.259 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="Android (6877366 based on r383902b1) clang version 11.0.2 (https://android.googlesource.com/toolchain/llvm-project b397f81060ce6d701042b782172ed13bee898b79)"
 CONFIG_GCC_VERSION=0
@@ -1219,7 +1219,6 @@ CONFIG_HYFI_BRIDGE_HOOKS=y
 CONFIG_HAVE_NET_DSA=y
 # CONFIG_NET_DSA is not set
 # CONFIG_VLAN_8021Q is not set
-# CONFIG_DECNET is not set
 CONFIG_LLC=y
 # CONFIG_LLC2 is not set
 # CONFIG_ATALK is not set
@@ -1269,14 +1268,11 @@ CONFIG_NET_SCH_INGRESS=y
 #
 CONFIG_NET_CLS=y
 # CONFIG_NET_CLS_BASIC is not set
-# CONFIG_NET_CLS_TCINDEX is not set
 # CONFIG_NET_CLS_ROUTE4 is not set
 CONFIG_NET_CLS_FW=y
 CONFIG_NET_CLS_U32=y
 # CONFIG_CLS_U32_PERF is not set
 # CONFIG_CLS_U32_MARK is not set
-# CONFIG_NET_CLS_RSVP is not set
-# CONFIG_NET_CLS_RSVP6 is not set
 # CONFIG_NET_CLS_FLOW is not set
 # CONFIG_NET_CLS_CGROUP is not set
 CONFIG_NET_CLS_BPF=y
@@ -1897,6 +1893,7 @@ CONFIG_SCSI_LOWLEVEL=y
 # CONFIG_SCSI_AIC94XX is not set
 # CONFIG_SCSI_MVSAS is not set
 # CONFIG_SCSI_MVUMI is not set
+# CONFIG_SCSI_DPT_I2O is not set
 # CONFIG_SCSI_ADVANSYS is not set
 # CONFIG_SCSI_ARCMSR is not set
 # CONFIG_SCSI_ESAS2R is not set
@@ -3888,7 +3885,6 @@ CONFIG_DRM_LONTIUM_LT9611UXC=y
 # CONFIG_DRM_ARCPGU is not set
 # CONFIG_DRM_HISI_HIBMC is not set
 # CONFIG_DRM_HISI_KIRIN is not set
-# CONFIG_DRM_MXSFB is not set
 # CONFIG_DRM_GM12U320 is not set
 # CONFIG_TINYDRM_HX8357D is not set
 # CONFIG_TINYDRM_ILI9225 is not set
@@ -5668,6 +5664,11 @@ CONFIG_QCOM_SPMI_ADC5=y
 # CONFIG_VF610_ADC is not set
 # CONFIG_XILINX_XADC is not set
 # end of Analog to digital converters
+
+#
+# Analog to digital and digital to analog converters
+#
+# end of Analog to digital and digital to analog converters
 
 #
 # Analog Front Ends
