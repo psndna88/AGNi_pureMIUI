@@ -2242,6 +2242,9 @@ static int wm_adsp_load(struct wm_adsp *dsp)
 	int regions = 0;
 	int ret, offset, type, sizes;
 	unsigned int burst_multiple;
+	u32 is_dev_mars = 0;
+	struct device_node *np = dsp->dev->of_node;
+	of_property_read_u32(np, "cirrus,is-mars-pa", &is_dev_mars);
 
 	file = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (file == NULL)
@@ -2263,9 +2266,15 @@ static int wm_adsp_load(struct wm_adsp *dsp)
 //#if defined(CONFIG_TARGET_PRODUCT_UMI) || defined(CONFIG_TARGET_PRODUCT_CMI)
 #ifdef CONFIG_AUDIO_SMARTPA_STEREO
 			if(dsp->chip_revid == 0xB2) {
-				snprintf(file, PAGE_SIZE, "%s-%s%d-%s-revb2.wmfw",
-					 dsp->part, wm_adsp_arch_text_lower(dsp->type),
-					 dsp->num, dsp->firmwares[dsp->fw].file);
+				if (is_dev_mars != 0) {
+					 snprintf(file, PAGE_SIZE, "%s-%s%d-%s-revb2-mars.wmfw",
+						dsp->part, wm_adsp_arch_text_lower(dsp->type),
+						dsp->num, dsp->firmwares[dsp->fw].file);
+				} else {
+					 snprintf(file, PAGE_SIZE, "%s-%s%d-%s-revb2.wmfw",
+						dsp->part, wm_adsp_arch_text_lower(dsp->type),
+						dsp->num, dsp->firmwares[dsp->fw].file);
+				}
 			} else {
 				snprintf(file, PAGE_SIZE, "%s-%s%d-%s.wmfw",
 					 dsp->part, wm_adsp_arch_text_lower(dsp->type),
@@ -3177,6 +3186,9 @@ static int wm_adsp_load_coeff(struct wm_adsp *dsp)
 	int ret, pos, blocks, type, offset, reg;
 	char *file;
 	unsigned int burst_multiple;
+	u32 is_dev_mars = 0;
+	struct device_node *np = dsp->dev->of_node;
+	of_property_read_u32(np, "cirrus,is-mars-pa", &is_dev_mars);
 
 	if (dsp->firmwares[dsp->fw].binfile &&
 	    !(strcmp(dsp->firmwares[dsp->fw].binfile, "None")))
@@ -3197,12 +3209,21 @@ static int wm_adsp_load_coeff(struct wm_adsp *dsp)
 #ifdef CONFIG_AUDIO_SMARTPA_STEREO
 		if(dsp->chip_revid == 0xB2) {
 			//for B2 chip
-			if (dsp->component->name_prefix)
-				snprintf(file, PAGE_SIZE, "%s-dsp%d-%s-%s-revb2.bin", dsp->part,
-					dsp->num, dsp->firmwares[dsp->fw].file, dsp->component->name_prefix);
-			else
-				snprintf(file, PAGE_SIZE, "%s-dsp%d-%s-revb2.bin", dsp->part,
-					dsp->num, dsp->firmwares[dsp->fw].file);
+			if (dsp->component->name_prefix) {
+				if (is_dev_mars != 0)
+					snprintf(file, PAGE_SIZE, "%s-dsp%d-%s-%s-revb2-mars.bin", dsp->part,
+						dsp->num, dsp->firmwares[dsp->fw].file, dsp->component->name_prefix);
+				else
+					snprintf(file, PAGE_SIZE, "%s-dsp%d-%s-%s-revb2.bin", dsp->part,
+						dsp->num, dsp->firmwares[dsp->fw].file, dsp->component->name_prefix);
+			} else {
+				if (is_dev_mars != 0)
+					snprintf(file, PAGE_SIZE, "%s-dsp%d-%s-revb2-mars.bin", dsp->part,
+						dsp->num, dsp->firmwares[dsp->fw].file);
+				else
+					snprintf(file, PAGE_SIZE, "%s-dsp%d-%s-revb2.bin", dsp->part,
+						dsp->num, dsp->firmwares[dsp->fw].file);
+			}
 		} else {
 			//for B0 chip
 			if (dsp->component->name_prefix)
@@ -3909,7 +3930,7 @@ err:
 	mutex_unlock(&vpu->pwr_lock);
 }
 
-void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
+static void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
 {
 	int ret;
 
@@ -4420,7 +4441,7 @@ static int wm_halo_apply_calibration(struct snd_soc_dapm_widget *w)
 				wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection cd CAL_STATUS", dsp->cal_status);
 				wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection cd CAL_CHECKSUM", dsp->cal_chksum);
 				//hold time = 0x96
-				wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
+				//wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
 				wm_adsp_k_ctl_get(dsp, "RCV DSP1X Protection cd CAL_R");
 				wm_adsp_k_ctl_get(dsp, "RCV DSP1X Protection cd CAL_STATUS");
 				wm_adsp_k_ctl_get(dsp, "RCV DSP1X Protection cd CAL_CHECKSUM");
@@ -4434,7 +4455,7 @@ static int wm_halo_apply_calibration(struct snd_soc_dapm_widget *w)
 				wm_adsp_k_ctl_put(dsp, "DSP1X Protection cd CAL_STATUS", dsp->cal_status);
 				wm_adsp_k_ctl_put(dsp, "DSP1X Protection cd CAL_CHECKSUM", dsp->cal_chksum);
 				//hold time = 0x96
-				wm_adsp_k_ctl_put(dsp, "DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
+				//wm_adsp_k_ctl_put(dsp, "DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
 				wm_adsp_k_ctl_get(dsp, "DSP1X Protection cd CAL_R");
 				wm_adsp_k_ctl_get(dsp, "DSP1X Protection cd CAL_STATUS");
 				wm_adsp_k_ctl_get(dsp, "DSP1X Protection cd CAL_CHECKSUM");

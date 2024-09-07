@@ -254,6 +254,11 @@ static const char *cs35l41_fast_switch_text[] = {
 	"spk2_playback_delta.txt",
 	"spk2_voice_delta.txt",
 	"rcv_voice_delta.txt",
+	"spk1_playback_delta-mars.txt",
+	"spk1_voice_delta-mars.txt",
+	"spk2_playback_delta-mars.txt",
+	"spk2_voice_delta-mars.txt",
+	"rcv_voice_delta-mars.txt",
 };
 
 static int cs35l41_fast_switch_en_get(struct snd_kcontrol *kcontrol,
@@ -358,6 +363,17 @@ static int cs35l41_do_fast_switch(struct cs35l41_private *cs35l41)
 		}
 	}
 
+	/* Verify if there is no active CSPL commands */
+	wm_adsp_read_ctl(&cs35l41->dsp, "CSPL_COMMAND", &cmd_ctl, sizeof(s32));
+	if (be32_to_cpu(cmd_ctl) != CSPL_CMD_NONE) {
+		dev_err(cs35l41->dev, "CSPL_COMMAND = %d)\n",
+			be32_to_cpu(cmd_ctl));
+		usleep_range(100, 110);
+		cmd_ctl = cpu_to_be32(CSPL_CMD_NONE);
+		wm_adsp_write_ctl(&cs35l41->dsp, "CSPL_COMMAND",
+				   &cmd_ctl, sizeof(s32));
+	}
+
 	wm_adsp_write_ctl(&cs35l41->dsp, "CSPL_UPDATE_PARAMS_CONFIG",
 			  data_ctl_buf, data_ctl_len * sizeof(s32));
 
@@ -428,6 +444,12 @@ static int cs35l41_fast_switch_file_put(struct snd_kcontrol *kcontrol,
 		dev_err(cs35l41->dev, "Invalid mixer input (%u)\n", i);
 		return -EINVAL;
 	}
+
+	i = i % (soc_enum->items/2);
+	if (soc_enum->shift_l == 1) {
+		i = i + soc_enum->items/2;
+	}
+
 	if ((i != cs35l41->fast_switch_file_idx) && cs35l41->fast_switch_en) {
 		cs35l41->fast_switch_file_idx = i;
 		ret = cs35l41_do_fast_switch(cs35l41);
@@ -685,6 +707,9 @@ static const struct snd_kcontrol_new cs35l41_aud_controls[] = {
 			 0, 7, 0),
 	SOC_SINGLE("Boost Class-H Tracking Enable", CS35L41_BSTCVRT_VCTRL2, 0, 1, 0),
 	SOC_SINGLE("Boost Target Voltage", CS35L41_BSTCVRT_VCTRL1, 0, 0xAA, 0),
+	SOC_SINGLE("Noise Gate", CS35L41_NG_CFG, 0, 0x3FFF, 0),
+	//Convert hex to int, eg. 0x2005309 --> 33575689, tinymix 'VPBR Config' 33575689
+	SOC_SINGLE("VPBR Config", CS35L41_VPBR_CFG, 0, 0x7FFFFFF, 0),
 	SOC_SINGLE("AMP Enable", CS35L41_PWR_CTRL2, 0, 1, 0),
 	SOC_ENUM("PCM Soft Ramp", pcm_sft_ramp),
 	SOC_SINGLE_EXT("DSP Booted", SND_SOC_NOPM, 0, 1, 0,
@@ -985,6 +1010,10 @@ static const struct reg_sequence cs35l41_pdn_patch[] = {
 	{0x00000040, 0x00000033},
 };
 
+static const struct reg_sequence cs35l41_dsp_recovery_patch[] = {
+	{0x02800258, 0x00000000},
+	{0x0280025c, 0x00000000},
+};
 
 static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
@@ -1029,8 +1058,12 @@ static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 				break;
 			default:
 				dev_err(cs35l41->dev,
-					"Firmware status is invalid(%u)\n",
+					"Firmware status is invalid(%u), try to recorver\n",
 					fw_status);
+				regmap_multi_reg_write_bypassed(cs35l41->regmap,
+						cs35l41_dsp_recovery_patch,
+						ARRAY_SIZE(cs35l41_dsp_recovery_patch));
+				mboxcmd = CSPL_MBOX_CMD_RESUME;
 				break;
 			}
 			ret = cs35l41_set_csplmboxcmd(cs35l41, mboxcmd);
@@ -1339,18 +1372,52 @@ static const struct cs35l41_global_fs_config cs35l41_fs_rates[] = {
 	{ 32000,	0x13 },
 };
 
-#define SPK_DAI_NAME "cs35l41.0-0041"
-#define RCV_DAI_NAME "cs35l41.0-0040"
-#define HANDSET_TUNING "rcv_voice_delta.txt"
-
 static int cs35l41_is_speaker_in_handset(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *rcv_dai = NULL;//rtd->codec_dais[1];
 	struct cs35l41_private *cs35l41 = NULL;
-	const char *fw_name = NULL;
+	const char *fw_name = "spk_voice_delta.txt";
+	const char *SPK_DAI_NAME = "cs35l41.1-0041";
+	const char *RCV_DAI_NAME = "cs35l41.1-0040";
+	const char *HANDSET_TUNING = "rcv_voice_delta.txt";
 	int i = 0;
+        u32 is_dev_mars = 0;
+        struct device_node *np = dai->dev->of_node;
+        of_property_read_u32(np, "cirrus,is-mars-pa", &is_dev_mars);
+
+#if defined(CONFIG_TARGET_PRODUCT_STAR)
+        SPK_DAI_NAME = "cs35l41.2-0042";
+        RCV_DAI_NAME = "cs35l41.2-0040";
+        HANDSET_TUNING = "rcv_voice_delta.txt";
+#endif
+#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
+        SPK_DAI_NAME = "cs35l41.0-0041";
+        RCV_DAI_NAME = "cs35l41.0-0040";
+        HANDSET_TUNING = "rcv_voice_delta.txt";
+#endif
+#if defined(CONFIG_TARGET_PRODUCT_ODIN)
+        SPK_DAI_NAME = "cs35l41.1-0042";
+        RCV_DAI_NAME = "cs35l41.1-0040";
+        HANDSET_TUNING = "rcv_voice_delta.txt";
+#endif
+//#if defined(CONFIG_TARGET_PRODUCT_VILI)
+        SPK_DAI_NAME = "cs35l41.1-0041";
+        RCV_DAI_NAME = "cs35l41.1-0040";
+        HANDSET_TUNING = "rcv_voice_delta.txt";
+//#endif
+#if defined(CONFIG_TARGET_PRODUCT_VENUS)
+        SPK_DAI_NAME = "cs35l41.1-0040";
+        RCV_DAI_NAME = "cs35l41.1-0042";
+        HANDSET_TUNING = "rcv_voice_delta.txt";
+#endif
+        /* modify dai name and handset tuning for mars */
+        if (is_dev_mars != 0) {
+		SPK_DAI_NAME = "cs35l41.1-0042";
+		RCV_DAI_NAME = "cs35l41.1-0040";
+		HANDSET_TUNING = "rcv_voice_delta-mars.txt";
+        }
 
 	/* Only care about speaker ops*/
 	if (strcmp(dai->name, SPK_DAI_NAME))
@@ -1971,7 +2038,12 @@ static int cs35l41_component_probe(struct snd_soc_component *component)
 		snd_soc_dapm_ignore_suspend(dapm, "TEMP");
 		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Preloader");
 		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Preload");
+#if defined(CONFIG_TARGET_PRODUCT_STAR)
+		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005305);
+#endif
+#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
 		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
+#endif
 	} else {
 		snd_soc_dapm_ignore_suspend(dapm, "RCV AMP Playback");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV AMP Capture");
@@ -1984,8 +2056,13 @@ static int cs35l41_component_probe(struct snd_soc_component *component)
 		snd_soc_dapm_ignore_suspend(dapm, "RCV TEMP");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV DSP1 Preloader");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV DSP1 Preload");
+#if defined(CONFIG_TARGET_PRODUCT_STAR)
+		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005306);
+#endif
+#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
 		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
 		regmap_write(cs35l41->regmap, CS35L41_DAC_MSM_CFG, 0x00200000);
+#endif
 	}
 /* Add run-time mixer control for fast use case switch */
 	kcontrol = kzalloc(sizeof(*kcontrol), GFP_KERNEL);
@@ -2054,12 +2131,21 @@ static int cs35l41_irq_gpio_config(struct cs35l41_private *cs35l41)
 						CS35L41_GPIO2_CTRL_SHIFT);
 	}
 
+#if defined(CONFIG_TARGET_PRODUCT_ODIN)
+	if (irq_gpio_cfg2->irq_src_sel ==
+			(CS35L41_GPIO_CTRL_ACTV_LO | CS35L41_VALID_PDATA))
+		irq_pol = IRQF_TRIGGER_FALLING;
+	else if (irq_gpio_cfg2->irq_src_sel ==
+			(CS35L41_GPIO_CTRL_ACTV_HI | CS35L41_VALID_PDATA))
+		irq_pol = IRQF_TRIGGER_RISING;
+#else
 	if (irq_gpio_cfg2->irq_src_sel ==
 			(CS35L41_GPIO_CTRL_ACTV_LO | CS35L41_VALID_PDATA))
 		irq_pol = IRQF_TRIGGER_LOW;
 	else if (irq_gpio_cfg2->irq_src_sel ==
 			(CS35L41_GPIO_CTRL_ACTV_HI | CS35L41_VALID_PDATA))
 		irq_pol = IRQF_TRIGGER_HIGH;
+#endif
 
 	return irq_pol;
 }
@@ -2130,6 +2216,7 @@ static int cs35l41_handle_of_data(struct device *dev,
 	struct irq_cfg *irq_gpio1_config = &pdata->irq_config1;
 	struct irq_cfg *irq_gpio2_config = &pdata->irq_config2;
 	unsigned int i;
+	u32 is_dev_mars = 0;
 
 	if (!np)
 		return 0;
@@ -2165,9 +2252,16 @@ static int cs35l41_handle_of_data(struct device *dev,
 		cs35l41->fast_switch_enum.texts	= cs35l41->fast_switch_names;
 	}
 
+	of_property_read_u32(np, "cirrus,is-mars-pa", &is_dev_mars);
+
 	cs35l41->fast_switch_enum.reg		= SND_SOC_NOPM;
-	cs35l41->fast_switch_enum.shift_l	= 0;
-	cs35l41->fast_switch_enum.shift_r	= 0;
+	if (is_dev_mars != 0) {
+		cs35l41->fast_switch_enum.shift_l	= 1;
+		cs35l41->fast_switch_enum.shift_r	= 1;
+	} else {
+		cs35l41->fast_switch_enum.shift_l	= 0;
+		cs35l41->fast_switch_enum.shift_r	= 0;
+	}
 	cs35l41->fast_switch_enum.mask		=
 		roundup_pow_of_two(num_fast_switch) - 1;
 
@@ -2483,6 +2577,27 @@ int cs35l41_probe(struct cs35l41_private *cs35l41,
 		/* satisfy minimum reset pulse width spec */
 		usleep_range(2000, 2100);
 		gpiod_set_value_cansleep(cs35l41->reset_gpio, 1);
+	}
+
+	cs35l41->spk_sw_gpio = devm_gpiod_get_optional(cs35l41->dev, "spksw",
+							GPIOD_OUT_LOW);
+	if (IS_ERR(cs35l41->spk_sw_gpio)) {
+		ret = PTR_ERR(cs35l41->spk_sw_gpio);
+		cs35l41->spk_sw_gpio = NULL;
+		if (ret == -EBUSY) {
+			dev_info(cs35l41->dev,
+				 "spk_rev_sw line busy, assuming shared reset\n");
+		} else {
+			dev_err(cs35l41->dev,
+				"Failed to get spk_rev_sw GPIO: %d\n", ret);
+			goto err;
+		}
+	}
+	if (cs35l41->spk_sw_gpio) {
+		/* satisfy minimum reset pulse width spec */
+		usleep_range(2000, 2100);
+		dev_info(cs35l41->dev, "set the spk_rev_sw GPIO: 0\n");
+		gpiod_set_value_cansleep(cs35l41->spk_sw_gpio, 0);
 	}
 
 	usleep_range(2000, 2100);

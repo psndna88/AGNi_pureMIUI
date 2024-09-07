@@ -27,7 +27,7 @@
 /* for elus end */
 #include <ipc/apr_tal.h>
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 #include <dsp/apr_mius.h>
 #endif
 /* for mius end */
@@ -1347,7 +1347,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		else
 			return -EINVAL;
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 	} else if (data->opcode == MI_ULTRASOUND_OPCODE) {
 		if (NULL != data->payload) {
 			printk(KERN_DEBUG "[MIUS] mi ultrasound afe afe cb");
@@ -3118,7 +3118,7 @@ EXPORT_SYMBOL(elus_afe);
 /* for elus end */
 
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 afe_mi_ultrasound_state_t mius_afe = {
 	.ptr_apr = &this_afe.apr,
 	.ptr_status = &this_afe.status,

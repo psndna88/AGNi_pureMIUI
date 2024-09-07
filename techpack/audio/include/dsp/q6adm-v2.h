@@ -230,6 +230,8 @@ int adm_get_sound_focus(int port_id, int copp_idx,
 			struct sound_focus_param *soundFocusData);
 int adm_get_source_tracking(int port_id, int copp_idx,
 			    struct source_tracking_param *sourceTrackingData);
+int adm_get_fnn_source_tracking(int port_id, int copp_idx,
+			    struct fluence_nn_source_tracking_param *FnnSourceTrackingData);
 int adm_get_doa_tracking_mon(int port_id, int copp_idx,
 			    struct doa_tracking_mon_param *doa_tracking_data);
 int adm_set_custom_chmix_cfg(int port_id, int copp_idx,
