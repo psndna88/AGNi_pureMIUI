@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_OPE_HW_H
@@ -12,11 +12,9 @@
 #define OPE_DEV_OPE  0
 #define OPE_DEV_MAX  1
 
-#define MAX_RD_CLIENTS   3
+#define MAX_RD_CLIENTS   2
 #define MAX_WR_CLIENTS   8
-#define MAX_PP_CLIENTS   32
-
-#define MAX_RW_CLIENTS   (MAX_RD_CLIENTS + MAX_WR_CLIENTS)
+#define MAX_PP_CLIENTS   29
 
 #define OPE_CDM_BASE     0x0
 #define OPE_TOP_BASE     0x1
@@ -25,6 +23,7 @@
 #define OPE_BUS_RD       0x4
 #define OPE_BUS_WR       0x5
 #define OPE_BASE_MAX     0x6
+
 
 #define BUS_RD_COMBO_BAYER_MASK   0x1
 #define BUS_RD_COMBO_YUV_MASK     0x2
@@ -54,16 +53,8 @@
 
 #define OPE_MAX_DEBUG_REGISTER 30
 
-struct cam_ope_pid_mid_info {
-	int cam_ope_res_type;
-	uint32_t pid;
-	uint32_t mid;
-	bool read;
-};
-
 struct cam_ope_common {
 	uint32_t mode[CAM_FORMAT_MAX];
-	struct cam_ope_pid_mid_info (*ope_mid_info)[MAX_RW_CLIENTS];
 };
 
 struct cam_ope_top_reg {
@@ -82,7 +73,6 @@ struct cam_ope_top_reg {
 	uint32_t violation_status;
 	uint32_t throttle_cnt_cfg;
 	uint32_t debug_cfg;
-	uint32_t scratch_reg;
 	uint32_t num_debug_registers;
 	struct cam_ope_debug_register *debug_regs;
 };

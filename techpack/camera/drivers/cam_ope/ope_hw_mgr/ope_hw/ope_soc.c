@@ -19,7 +19,7 @@ static int cam_ope_get_dt_properties(struct cam_hw_soc_info *soc_info)
 	int rc = 0;
 	struct platform_device *pdev = NULL;
 	struct device_node *of_node = NULL;
-	struct cam_ope_soc_private *ope_soc_info;
+	struct ope_dev_soc *ope_soc_info;
 
 	if (!soc_info) {
 		CAM_ERR(CAM_OPE, "soc_info is NULL");
@@ -54,17 +54,7 @@ static int cam_ope_request_platform_resource(
 int cam_ope_init_soc_resources(struct cam_hw_soc_info *soc_info,
 	irq_handler_t ope_irq_handler, void *irq_data)
 {
-	struct cam_ope_soc_private  *soc_private;
-	struct platform_device *pdev = NULL;
-	int num_pid = 0, i = 0;
 	int rc = 0;
-
-	soc_private = kzalloc(sizeof(struct cam_ope_soc_private), GFP_KERNEL);
-	if (!soc_private) {
-		CAM_DBG(CAM_ISP, "Error! soc_private Alloc Failed");
-			return -ENOMEM;
-	}
-	soc_info->soc_private = soc_private;
 
 	rc = cam_ope_get_dt_properties(soc_info);
 	if (rc < 0)
@@ -75,20 +65,6 @@ int cam_ope_init_soc_resources(struct cam_hw_soc_info *soc_info,
 	if (rc < 0)
 		return rc;
 
-	soc_private->num_pid = 0;
-	pdev = soc_info->pdev;
-	num_pid = of_property_count_u32_elems(pdev->dev.of_node, "cam_hw_pid");
-	CAM_DBG(CAM_OPE, "ope: %d pid count %d", soc_info->index, num_pid);
-
-	if (num_pid <= 0  || num_pid > CAM_OPE_HW_MAX_NUM_PID)
-		goto end;
-
-	soc_private->num_pid  = num_pid;
-
-	for (i = 0; i < num_pid; i++)
-		of_property_read_u32_index(pdev->dev.of_node, "cam_hw_pid", i,
-				&soc_private->pid[i]);
-end:
 	return rc;
 }
 

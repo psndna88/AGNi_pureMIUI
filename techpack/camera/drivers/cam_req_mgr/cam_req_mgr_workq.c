@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_req_mgr_workq.h"
 #include "cam_debug_util.h"
-#include "cam_common_util.h"
 
 #define WORKQ_ACQUIRE_LOCK(workq, flags) {\
 	if ((workq)->in_irq) \
@@ -95,7 +94,6 @@ void cam_req_mgr_process_workq(struct work_struct *w)
 	struct crm_workq_task         *task;
 	int32_t                        i = CRM_TASK_PRIORITY_0;
 	unsigned long                  flags = 0;
-	ktime_t                        curr_time;
 
 	if (!w) {
 		CAM_ERR(CAM_CRM, "NULL task pointer can not schedule");
@@ -104,11 +102,7 @@ void cam_req_mgr_process_workq(struct work_struct *w)
 	workq = (struct cam_req_mgr_core_workq *)
 		container_of(w, struct cam_req_mgr_core_workq, work);
 
-	cam_common_util_thread_switch_delay_detect(
-		"CRM workq schedule",
-		workq->workq_scheduled_ts,
-		CAM_WORKQ_SCHEDULE_TIME_THRESHOLD);
-	curr_time = ktime_get();
+	cam_req_mgr_thread_switch_delay_detect(workq->workq_scheduled_ts);
 	while (i < CRM_TASK_PRIORITY_MAX) {
 		WORKQ_ACQUIRE_LOCK(workq, flags);
 		while (!list_empty(&workq->task.process_head[i])) {
@@ -125,10 +119,6 @@ void cam_req_mgr_process_workq(struct work_struct *w)
 		WORKQ_RELEASE_LOCK(workq, flags);
 		i++;
 	}
-	cam_common_util_thread_switch_delay_detect(
-		"CRM workq execution",
-		curr_time,
-		CAM_WORKQ_EXE_TIME_THRESHOLD);
 }
 
 int cam_req_mgr_workq_enqueue_task(struct crm_workq_task *task,
@@ -175,8 +165,8 @@ int cam_req_mgr_workq_enqueue_task(struct crm_workq_task *task,
 	CAM_DBG(CAM_CRM, "enq task %pK pending_cnt %d",
 		task, atomic_read(&workq->task.pending_cnt));
 
-	queue_work(workq->job, &workq->work);
 	workq->workq_scheduled_ts = ktime_get();
+	queue_work(workq->job, &workq->work);
 	WORKQ_RELEASE_LOCK(workq, flags);
 end:
 	return rc;
@@ -275,5 +265,27 @@ void cam_req_mgr_workq_destroy(struct cam_req_mgr_core_workq **crm_workq)
 		kfree((*crm_workq)->task.pool);
 		kfree(*crm_workq);
 		*crm_workq = NULL;
+	}
+}
+
+void cam_req_mgr_thread_switch_delay_detect(ktime_t workq_scheduled)
+{
+	uint64_t                         diff;
+	ktime_t                          cur_time;
+	struct timespec64                cur_ts;
+	struct timespec64                workq_scheduled_ts;
+
+	cur_time = ktime_get();
+	diff = ktime_ms_delta(cur_time, workq_scheduled);
+	workq_scheduled_ts  = ktime_to_timespec64(workq_scheduled);
+	cur_ts = ktime_to_timespec64(cur_time);
+
+	if (diff > CAM_WORKQ_RESPONSE_TIME_THRESHOLD) {
+		CAM_WARN_RATE_LIMIT(CAM_CRM,
+			"Workq delay detected %ld:%06ld %ld:%06ld %ld:",
+			workq_scheduled_ts.tv_sec,
+			workq_scheduled_ts.tv_nsec/NSEC_PER_USEC,
+			cur_ts.tv_sec, cur_ts.tv_nsec/NSEC_PER_USEC,
+			diff);
 	}
 }

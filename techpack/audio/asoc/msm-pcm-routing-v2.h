@@ -1,11 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
-/*
- * Add support for 24 and 32bit format for ASM loopback and playback session.
- */
-
 #ifndef _MSM_PCM_ROUTING_H
 #define _MSM_PCM_ROUTING_H
 #include <dsp/apr_audio-v2.h>
@@ -688,15 +683,12 @@ enum {
 #define ADM_PP_PARAM_MUTE_BIT			1
 #define ADM_PP_PARAM_LATENCY_ID			1
 #define ADM_PP_PARAM_LATENCY_BIT		2
-#define BE_DAI_PORT_SESSIONS_IDX_MAX		5
+#define BE_DAI_PORT_SESSIONS_IDX_MAX		4
 #define BE_DAI_FE_SESSIONS_IDX_MAX		2
 
 #define STREAM_TYPE_ASM 0
 #define STREAM_TYPE_LSM 1
-#define MT_MX_MAX_PORTS 64
 
-#define PP_PERF_MODE_FLAG_MASK                0x10000
-#define PP_PERF_MODE_VALUE_MASK               0xF
 enum {
 	ADM_TOPOLOGY_CAL_TYPE_IDX = 0,
 	ADM_LSM_TOPOLOGY_CAL_TYPE_IDX,
@@ -751,29 +743,6 @@ struct msm_pcm_stream_app_type_cfg {
 	int acdb_dev_id;
 	int sample_rate;
 	uint32_t copp_token;
-	int bit_width;
-	int copp_perf_mode;
-};
-
-struct msm_pcm_channel_mixer_v2 {
-	struct msm_pcm_channel_mixer mixer_cfg;
-	int fedai_id;
-	int session_type;
-	int be_id;
-	bool is_used;
-};
-
-struct msm_asm_config {
-	u8 fe_id;
-	u8 mode; /* playback=0, capture=1,loopback=2 */
-	u8 bit_format;
-};
-
-enum {
-	MSM_ASM_PLAYBACK_MODE = 0,
-	MSM_ASM_CAPTURE_MODE,
-	MSM_ASM_LOOPBACK_MODE,
-	MSM_ASM_MAX_MODE
 };
 
 /* dai_id: front-end ID,
@@ -819,42 +788,14 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 	int fe_id, int session_type,
 	struct msm_pcm_channel_mixer *params);
 
-#ifdef CONFIG_PLATFORM_AUTO
 int msm_pcm_routing_set_channel_mixer_runtime(
-	int fe_id, int be_id, int session_id,
+	int be_id, int session_id,
 	int session_type,
 	struct msm_pcm_channel_mixer *params);
-#else
-int msm_pcm_routing_set_channel_mixer_runtime(
-         int be_id, int session_id,
-         int session_type,
-         struct msm_pcm_channel_mixer *params);
-#endif
 
 int msm_pcm_routing_set_stream_ec_ref_chmix_cfg(
 	int fedai_id, struct msm_pcm_channel_mixer *cfg_data);
-int msm_pcm_asm_cfg_get(int fe_id, int mode);
 
-
-/* array element of usr elem */
-struct snd_pcm_soft_vol_usr_elem {
-	int val[3];
-};
-
-/* mixer control information; retrieved via snd_kcontrol_chip() */
-struct snd_pcm_soft_volume {
-	struct snd_pcm *pcm;    /* assigned PCM instance */
-	int stream;             /* PLAYBACK or CAPTURE */
-	struct snd_kcontrol *kctl;   /* contorl handle*/
-	const struct snd_pcm_soft_vol_usr_elem *usr_val;
-	int max_length;
-	void *private_data;
-};
-
-int snd_pcm_add_soft_volume_ctls(struct snd_pcm *pcm, int stream,
-		const struct snd_pcm_soft_vol_usr_elem *soft_vol_params,
-		unsigned long private_value,
-		struct snd_pcm_soft_volume **info_ret);
 #ifndef SND_PCM_ADD_VOLUME_CTL
 /* PCM Volume control API
  */
@@ -905,7 +846,4 @@ int snd_pcm_add_usr_ctls(struct snd_pcm *pcm, int stream,
     unsigned long private_value,
     struct snd_pcm_usr **info_ret);
 #endif
-
-bool msm_pcm_routing_get_portid_copp_idx(int fe_id,
-	int session_type, int *port_id, int *copp_idx);
 #endif /*_MSM_PCM_H*/

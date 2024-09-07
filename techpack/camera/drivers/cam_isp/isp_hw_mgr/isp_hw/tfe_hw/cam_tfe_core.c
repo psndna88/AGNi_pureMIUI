@@ -444,7 +444,7 @@ static void cam_tfe_log_error_irq_status(
 		"TFE clock rate:%d TFE total bw applied:%lld",
 		top_priv->hw_clk_rate,
 		top_priv->total_bw_applied);
-	cam_cpas_log_votes();
+
 }
 
 static int cam_tfe_error_irq_bottom_half(
@@ -965,62 +965,6 @@ static int cam_tfe_top_set_hw_clk_rate(
 	else
 		CAM_ERR(CAM_ISP, "TFE:%d set src clock rate:%lld failed, rc=%d",
 		top_priv->common_data.soc_info->index, max_clk_rate,  rc);
-
-	return rc;
-}
-
-static int cam_tfe_top_get_hw_clk_rate(
-	struct cam_tfe_top_priv  *top_priv,
-	void                     *cmd_args,
-	uint32_t                  arg_size)
-{
-	struct cam_hw_soc_info   *soc_info;
-	uint32_t                 *curr_clk_rate;
-	int                      src_clk_idx;
-	int rc = 0;
-
-	if (!top_priv) {
-		CAM_ERR(CAM_ISP, "Error top_private NULL");
-		return -EINVAL;
-	}
-
-	soc_info = top_priv->common_data.soc_info;
-	src_clk_idx = soc_info->src_clk_idx;
-
-	curr_clk_rate = (uint32_t *)cmd_args;
-
-	rc = cam_soc_util_get_clk_rate(soc_info->clk[src_clk_idx],
-		soc_info->clk_name[src_clk_idx], curr_clk_rate);
-
-	CAM_DBG(CAM_ISP, "TFE clock rate %llu", *curr_clk_rate);
-
-	return rc;
-}
-
-static int cam_tfe_top_dynamic_clock_update(
-	struct cam_tfe_top_priv  *top_priv,
-	void                     *cmd_args,
-	uint32_t                 arg_size)
-{
-	struct cam_hw_soc_info   *soc_info;
-	int                      src_clk_idx;
-	uint32_t                 *clk_rate;
-	int rc = 0;
-
-	soc_info = top_priv->common_data.soc_info;
-	src_clk_idx = soc_info->src_clk_idx;
-
-	clk_rate = (uint32_t *)cmd_args;
-
-	CAM_DBG(CAM_ISP, "TFE clock rate %lld", *clk_rate);
-
-	rc = cam_soc_util_set_src_clk_rate(soc_info, *clk_rate);
-	if (rc) {
-		CAM_ERR(CAM_ISP,
-			"unable to set clock dynamically rate:%lld",
-			*clk_rate);
-		return rc;
-	}
 
 	return rc;
 }
@@ -2935,14 +2879,6 @@ int cam_tfe_process_cmd(void *hw_priv, uint32_t cmd_type,
 		break;
 	case CAM_ISP_HW_CMD_SET_CAMIF_DEBUG:
 		rc = cam_tfe_set_top_debug(core_info, cmd_args,
-			arg_size);
-		break;
-	case CAM_ISP_HW_CMD_GET_CLOCK_RATE:
-		rc = cam_tfe_top_get_hw_clk_rate(core_info->top_priv, cmd_args,
-			arg_size);
-		break;
-	case CAM_ISP_HW_CMD_DYNAMIC_CLOCK_UPDATE:
-		rc = cam_tfe_top_dynamic_clock_update(core_info->top_priv, cmd_args,
 			arg_size);
 		break;
 	case CAM_ISP_HW_CMD_GET_BUF_UPDATE:

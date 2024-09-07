@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -972,8 +971,8 @@ static int rx_macro_set_prim_interpolator_rate(struct snd_soc_dai *dai,
 					     0x80 * j;
 				pr_debug("%s: AIF_PB DAI(%d) connected to INT%u_1\n",
 					  __func__, dai->id, j);
-				pr_debug("%s: set INT%u_1 sample rate to %u\n",
-					__func__, j, sample_rate);
+				pr_debug("%s: set INT%u_1 sample rate to %u, rate_reg=%d\n",
+					__func__, j, sample_rate, rate_reg_val);
 				/* sample_rate is in Hz */
 				snd_soc_component_update_bits(component,
 						int_fs_reg,
@@ -1214,9 +1213,9 @@ static int rx_macro_get_channel_map(struct snd_soc_dai *dai,
 			ch_mask = 0x1;
 		*rx_slot = ch_mask;
 		*rx_num = rx_priv->active_ch_cnt[dai->id];
-		dev_dbg(rx_priv->dev,
-			"%s: dai->id:%d, ch_mask:0x%x, active_ch_cnt:%d active_mask: 0x%x\n",
-			__func__, dai->id, *rx_slot, *rx_num, rx_priv->active_ch_mask[dai->id]);
+		dev_err(rx_priv->dev,
+			"%s: dai->id:%d(%s) ch_mask:0x%x active_ch_cnt:%d active_mask: 0x%lx\n",
+			__func__, dai->id, dai->name, *rx_slot, *rx_num, rx_priv->active_ch_mask[dai->id]);
 		break;
 	case RX_MACRO_AIF5_PB:
 		*rx_slot = 0x1;
@@ -1397,7 +1396,7 @@ static int rx_macro_mclk_enable(struct rx_macro_priv *rx_priv,
 		}
 	}
 exit:
-	dev_dbg(rx_priv->dev, "%s: mclk_enable = %u, dapm = %d clk_users= %d\n",
+	trace_printk("%s: mclk_enable = %u, dapm = %d clk_users= %d\n",
 		__func__, mclk_enable, dapm, rx_priv->rx_mclk_users);
 	mutex_unlock(&rx_priv->mclk_lock);
 	return ret;
@@ -1484,6 +1483,7 @@ static int rx_macro_event_handler(struct snd_soc_component *component,
 		rx_macro_wcd_clsh_imped_config(component, data, false);
 		break;
 	case BOLERO_MACRO_EVT_SSR_DOWN:
+		trace_printk("%s, enter SSR down\n", __func__);
 		rx_priv->dev_up = false;
 		if (rx_priv->swr_ctrl_data) {
 			swrm_wcd_notify(
@@ -1518,6 +1518,7 @@ static int rx_macro_event_handler(struct snd_soc_component *component,
 		rx_macro_core_vote(rx_priv, false);
 		break;
 	case BOLERO_MACRO_EVT_SSR_UP:
+		trace_printk("%s, enter SSR up\n", __func__);
 		rx_priv->dev_up = true;
 		/* reset swr after ssr/pdr */
 		rx_priv->reset_swr = true;
@@ -2277,8 +2278,8 @@ static int rx_macro_mux_put(struct snd_kcontrol *kcontrol,
 	}
 	rx_priv->rx_port_value[widget->shift] = rx_port_value;
 
-	dev_dbg(rx_dev, "%s: mux input: %d, mux output: %d, aif_rst: %d\n",
-		__func__, rx_port_value, widget->shift, aif_rst);
+	dev_err(rx_dev, "%s: name:%s mux input:%d mux output:%d aif_rst: %d\n",
+		__func__, widget->name, rx_port_value, widget->shift, aif_rst);
 
 	switch (rx_port_value) {
 	case 0:
@@ -2710,8 +2711,7 @@ static void rx_macro_hphdelay_lutbypass(struct snd_soc_component *component,
 	}
 
 	if (hph_lut_bypass_reg && SND_SOC_DAPM_EVENT_OFF(event)) {
-		if (!rx_priv->is_ear_mode_on)
-			snd_soc_component_update_bits(component,
+		snd_soc_component_update_bits(component,
 					BOLERO_CDC_RX_RX0_RX_PATH_CFG1,
 					0x02, 0x00);
 		snd_soc_component_update_bits(component, hph_lut_bypass_reg,
@@ -2795,6 +2795,7 @@ static int rx_macro_enable_interp_clk(struct snd_soc_component *component,
 			snd_soc_component_update_bits(component, main_reg,
 						0x40, 0x00);
 			/* Reset rate to 48K*/
+			dev_dbg(component->dev, "%s: reset rate to 48k\n", __func__);
 			snd_soc_component_update_bits(component, main_reg,
 						0x0F, 0x04);
 			snd_soc_component_update_bits(component, rx_cfg2_reg,
@@ -3848,6 +3849,8 @@ static int rx_swrm_clock(void *handle, bool enable)
 
 	mutex_lock(&rx_priv->swr_clk_lock);
 
+	trace_printk("%s: swrm clock %s\n",
+			__func__, (enable ? "enable" : "disable"));
 	dev_dbg(rx_priv->dev, "%s: swrm clock %s\n",
 		__func__, (enable ? "enable" : "disable"));
 	if (enable) {
@@ -3914,6 +3917,8 @@ static int rx_swrm_clock(void *handle, bool enable)
 			}
 		}
 	}
+	trace_printk("%s: swrm clock users %d\n",
+		__func__, rx_priv->swr_clk_users);
 	dev_dbg(rx_priv->dev, "%s: swrm clock users %d\n",
 		__func__, rx_priv->swr_clk_users);
 exit:
@@ -4132,7 +4137,17 @@ static void rx_macro_add_child_devices(struct work_struct *work)
 					__func__, ctrl_num);
 				goto fail_pdev_add;
 			}
+		}
 
+		ret = platform_device_add(pdev);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"%s: Cannot add platform device\n",
+				__func__);
+			goto fail_pdev_add;
+		}
+
+		if (rx_swr_master_node) {
 			temp = krealloc(swr_ctrl_data,
 					(ctrl_num + 1) * sizeof(
 					struct rx_swr_ctrl_data),
@@ -4145,19 +4160,10 @@ static void rx_macro_add_child_devices(struct work_struct *work)
 			swr_ctrl_data[ctrl_num].rx_swr_pdev = pdev;
 			ctrl_num++;
 			dev_dbg(&pdev->dev,
-				"%s: Adding soundwire ctrl device(s)\n",
+				"%s: Added soundwire ctrl device(s)\n",
 				__func__);
 			rx_priv->swr_ctrl_data = swr_ctrl_data;
 		}
-
-		ret = platform_device_add(pdev);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"%s: Cannot add platform device\n",
-				__func__);
-			goto fail_pdev_add;
-		}
-
 		if (rx_priv->child_count < RX_MACRO_CHILD_DEVICES_MAX)
 			rx_priv->pdev_child_devices[
 					rx_priv->child_count++] = pdev;

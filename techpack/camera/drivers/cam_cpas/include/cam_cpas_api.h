@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CPAS_API_H_
@@ -68,7 +68,6 @@ enum cam_cpas_camera_version {
 	CAM_CPAS_CAMERA_VERSION_545  = 0x00050405,
 	CAM_CPAS_CAMERA_VERSION_570  = 0x00050700,
 	CAM_CPAS_CAMERA_VERSION_680  = 0x00060800,
-	CAM_CPAS_CAMERA_VERSION_165  = 0x00010605,
 	CAM_CPAS_CAMERA_VERSION_MAX
 };
 
@@ -101,7 +100,6 @@ enum cam_cpas_camera_version_map_id {
 	CAM_CPAS_CAMERA_VERSION_ID_545  = 0x7,
 	CAM_CPAS_CAMERA_VERSION_ID_570  = 0x8,
 	CAM_CPAS_CAMERA_VERSION_ID_680  = 0x9,
-	CAM_CPAS_CAMERA_VERSION_ID_165  = 0xA,
 	CAM_CPAS_CAMERA_VERSION_ID_MAX
 };
 
@@ -125,7 +123,6 @@ enum cam_cpas_version_map_id {
 enum cam_cpas_hw_version {
 	CAM_CPAS_TITAN_NONE = 0,
 	CAM_CPAS_TITAN_150_V100 = 0x150100,
-	CAM_CPAS_TITAN_165_V100 = 0x165100,
 	CAM_CPAS_TITAN_170_V100 = 0x170100,
 	CAM_CPAS_TITAN_170_V110 = 0x170110,
 	CAM_CPAS_TITAN_170_V120 = 0x170120,
@@ -138,9 +135,7 @@ enum cam_cpas_hw_version {
 	CAM_CPAS_TITAN_580_V100 = 0x580100,
 	CAM_CPAS_TITAN_540_V100 = 0x540100,
 	CAM_CPAS_TITAN_520_V100 = 0x520100,
-	CAM_CPAS_TITAN_520_V110 = 0x520110,
 	CAM_CPAS_TITAN_545_V100 = 0x545100,
-	CAM_CPAS_TITAN_545_V110 = 0x545110,
 	CAM_CPAS_TITAN_570_V200 = 0x570200,
 	CAM_CPAS_TITAN_680_V100 = 0x680100,
 	CAM_CPAS_TITAN_MAX
@@ -641,21 +636,6 @@ int cam_cpas_get_cpas_hw_version(
 	uint32_t				 *hw_version);
 
 /**
- * cam_cpas_get_camnoc_fifo_fill_level_info()
- *
- * @brief: API to get camera camnoc hw version
- *
- * @cpas_version: hw version
- * @client_handle: cpas client handle
- *
- * @return 0 on success.
- *
- */
-int cam_cpas_get_camnoc_fifo_fill_level_info(
-	uint32_t                               cpas_version,
-	uint32_t                               client_handle);
-
-/**
  * cam_cpas_is_feature_supported()
  *
  * @brief: API to get camera features
@@ -731,23 +711,11 @@ int cam_cpas_select_qos_settings(uint32_t selection_mask);
  *
  * @identifier_string: Identifier string passed by caller
  * @identifier_value: Identifier value passed by caller
- */
-int cam_cpas_notify_event(const char *identifier_string,
-	int32_t identifier_value);
-
-/*
- * cam_cpas_hw_get_camnoc_fill_level_info()
- *
- * @brief: API to get camnoc info
- *
- * @cpas_version: cpas hw version
- * @client_handle: cpas client handle
  *
  * @return 0 on success.
  *
  */
-int cam_cpas_hw_get_camnoc_fill_level_info(
-	uint32_t cpas_version,
-	uint32_t client_handle);
+int cam_cpas_notify_event(const char *identifier_string,
+	int32_t identifier_value);
 
 #endif /* _CAM_CPAS_API_H_ */

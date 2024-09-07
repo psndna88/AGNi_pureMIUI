@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_TFE_CSID_HW_H_
@@ -185,7 +185,6 @@ struct cam_tfe_csid_csi2_rx_reg_offset {
 	uint32_t csid_csi2_rx_total_crc_err_addr;
 
 	/*configurations */
-	uint32_t phy_sel_base;
 	uint32_t csi2_rst_srb_all;
 	uint32_t csi2_rst_done_shift_val;
 	uint32_t csi2_irq_mask_all;
@@ -333,12 +332,7 @@ struct cam_tfe_csid_cid_data {
  * @sensor_fps      Sensor fps
  * @sensor_hbi      Sensor horizontal blanking interval
  * @sensor_vbi      Sensor vertical blanking interval
- * @usage_type:     dual or single tfe information
- * @init_frame_drop init frame drop value. In dual ife case rdi need to drop one
- *                  more frame than pix.
- * @res_sof_cnt     path resource sof count value. it used for initial
- *                  frame drop
-
+ *
  */
 struct cam_tfe_csid_path_cfg {
 	uint32_t                        vc;
@@ -361,9 +355,6 @@ struct cam_tfe_csid_path_cfg {
 	uint32_t                        sensor_fps;
 	uint32_t                        sensor_hbi;
 	uint32_t                        sensor_vbi;
-	uint32_t                        usage_type;
-	uint32_t                        init_frame_drop;
-	uint32_t                        res_sof_cnt;
 };
 
 /**

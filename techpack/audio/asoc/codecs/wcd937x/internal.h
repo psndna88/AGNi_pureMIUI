@@ -89,10 +89,6 @@ struct wcd937x_priv {
 	struct snd_info_entry *variant_entry;
 	int ear_rx_path;
 	int ana_clk_count;
-#ifdef CONFIG_SND_SOC_FOR_ULTRASOUND_PATH
-	int ana_adc_count; //for wcd937x_codec_enable_adc
-	int ana_tx_req_count; //for wcd937x_enable_req
-#endif
 	struct mutex ana_tx_clk_lock;
 	u8 tx_master_ch_map[WCD937X_MAX_SLAVE_CH_TYPES];
 	bool usbc_hs_status;

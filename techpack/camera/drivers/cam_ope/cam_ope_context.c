@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -40,6 +39,7 @@ static int cam_ope_context_dump_active_request(void *data,
 		return -EINVAL;
 	}
 
+	mutex_lock(&ctx->ctx_mutex);
 	if (ctx->state < CAM_CTX_ACQUIRED || ctx->state > CAM_CTX_ACTIVATED) {
 		CAM_ERR(CAM_OPE, "Invalid state ope ctx %d state %d",
 			ctx->ctx_id, ctx->state);
@@ -54,7 +54,7 @@ static int cam_ope_context_dump_active_request(void *data,
 		pf_dbg_entry = &(req->pf_data);
 		CAM_INFO(CAM_OPE, "req_id : %lld", req->request_id);
 
-		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry,
+		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
 			&b_mem_found, &b_ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_OPE, "Failed to dump pf info");
@@ -65,6 +65,7 @@ static int cam_ope_context_dump_active_request(void *data,
 	}
 
 end:
+	mutex_unlock(&ctx->ctx_mutex);
 	return rc;
 }
 
@@ -155,7 +156,6 @@ static int __cam_ope_config_dev_in_ready(struct cam_context *ctx,
 	if (rc)
 		CAM_ERR(CAM_OPE, "Failed to prepare device");
 
-	cam_mem_put_cpu_buf((int32_t) cmd->packet_handle);
 	return rc;
 }
 

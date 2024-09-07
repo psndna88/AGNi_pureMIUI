@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -58,29 +58,33 @@ static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 		goto pid;
 	}
 
-	if (!of_property_read_bool(of_node, "ubwc-static-cfg")) {
-		CAM_DBG(CAM_ISP, "ubwc-static-cfg not supported");
-		goto pid;
-	}
+	switch (soc_info->hw_version) {
+	case CAM_CPAS_TITAN_480_V100:
+	case CAM_CPAS_TITAN_580_V100:
+	case CAM_CPAS_TITAN_570_V200:
+		num_ubwc_cfg = of_property_count_u32_elems(of_node,
+			"ubwc-static-cfg");
 
-	num_ubwc_cfg = of_property_count_u32_elems(of_node,
-		"ubwc-static-cfg");
-
-	if (num_ubwc_cfg < 0 || num_ubwc_cfg > UBWC_STATIC_CONFIG_MAX) {
-		CAM_ERR(CAM_ISP, "wrong num_ubwc_cfg: %d",
-			num_ubwc_cfg);
-		rc = num_ubwc_cfg;
-		goto pid;
-	}
-
-	for (i = 0; i < num_ubwc_cfg; i++) {
-		rc = of_property_read_u32_index(of_node,
-			"ubwc-static-cfg", i,
-			&vfe_soc_private->ubwc_static_ctrl[i]);
-		if (rc < 0) {
-			CAM_ERR(CAM_ISP,
-				"unable to read ubwc static config");
+		if (num_ubwc_cfg < 0 || num_ubwc_cfg > UBWC_STATIC_CONFIG_MAX) {
+			CAM_ERR(CAM_ISP, "wrong num_ubwc_cfg: %d",
+				num_ubwc_cfg);
+			rc = num_ubwc_cfg;
+			goto pid;
 		}
+
+		for (i = 0; i < num_ubwc_cfg; i++) {
+			rc = of_property_read_u32_index(of_node,
+				"ubwc-static-cfg", i,
+				&vfe_soc_private->ubwc_static_ctrl[i]);
+			if (rc < 0) {
+				CAM_ERR(CAM_ISP,
+					"unable to read ubwc static config");
+				break;
+			}
+		}
+		break;
+	default:
+		break;
 	}
 pid:
 	/* set some default values */
@@ -307,7 +311,7 @@ int cam_vfe_soc_enable_clk(struct cam_hw_soc_info *soc_info,
 		}
 
 		rc = cam_soc_util_clk_enable(soc_private->dsp_clk,
-			CAM_VFE_DSP_CLK_NAME, soc_private->dsp_clk_rate, NULL);
+			CAM_VFE_DSP_CLK_NAME, soc_private->dsp_clk_rate);
 		if (rc)
 			CAM_ERR(CAM_ISP,
 			"Error enable dsp clk failed rc=%d", rc);

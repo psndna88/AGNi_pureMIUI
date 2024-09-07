@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_COMMON_UTIL_H_
@@ -32,14 +32,6 @@
 	}                                                                      \
 })
 
-#define CAM_CONVERT_TIMESTAMP_FORMAT(ts, hrs, min, sec, ms)                                  \
-({                                                                                           \
-	uint64_t tmp = ((ts).tv_sec);                                                        \
-	(ms) = ((ts).tv_nsec) / 1000000;                                                     \
-	(sec) = do_div(tmp, 60);                                                             \
-	(min) = do_div(tmp, 60);                                                             \
-	(hrs) = do_div(tmp, 24);                                                             \
-})
 
 /**
  * cam_common_util_get_string_index()
@@ -71,18 +63,5 @@ int cam_common_util_get_string_index(const char **strings,
  */
 uint32_t cam_common_util_remove_duplicate_arr(int32_t *array,
 	uint32_t num);
-
-/**
- * cam_common_util_thread_switch_delay_detect()
- *
- * @brief                  Detect if there is any scheduling delay
- *
- * @token:                 String identifier to print workq name or tasklet
- * @scheduled_time:        Time when workq or tasklet was scheduled
- * @threshold:             Threshold time
- *
- */
-void cam_common_util_thread_switch_delay_detect(const char *token,
-	ktime_t scheduled_time, uint32_t threshold);
 
 #endif /* _CAM_COMMON_UTIL_H_ */

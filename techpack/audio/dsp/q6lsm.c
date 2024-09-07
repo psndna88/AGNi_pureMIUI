@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2021, Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/fs.h>
 #include <linux/mutex.h>
@@ -243,11 +241,6 @@ static int q6lsm_callback(struct apr_client_data *data, void *priv)
 			goto done;
 		}
 
-		if (!client->get_param_payload) {
-			pr_err("%s: invalid get_param_payload buffer ptr\n", __func__);
-			ret = -EINVAL;
-			goto done;
-		}
 		memcpy((u8 *)client->get_param_payload,
 			(u8 *)payload + payload_min_size_expected, param_size);
 done:
@@ -485,10 +478,6 @@ static int q6lsm_apr_send_pkt(struct lsm_client *client, void *handle,
 	}
 
 	pr_debug("%s: enter wait %d\n", __func__, wait);
-	if (mmap_handle_p) {
-		pr_debug("%s: Invalid mmap_handle\n", __func__);
-		return -EINVAL;
-	}
 	if (wait)
 		mutex_lock(&lsm_common.apr_lock);
 	if (mmap_p) {
@@ -541,7 +530,6 @@ static int q6lsm_apr_send_pkt(struct lsm_client *client, void *handle,
 
 	if (mmap_p && *mmap_p == 0)
 		ret = -ENOMEM;
-	mmap_handle_p = NULL;
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 }
@@ -2131,22 +2119,6 @@ static int q6lsm_mmapcallback(struct apr_client_data *data, void *priv)
 		return 0;
 	}
 
-	/*
-	The payload_size can be either 4 or 8 bytes.
-	It has to be verified whether the payload_size is
-	atleast 4 bytes. If it is less, returns errorcode.
-
-	The opcode for 4 bytes is 0x12A80
-	The opcode for 8 bytes is 0x110E8.
-	 
-	*/
- 
-	if (data->payload_size < (2 * sizeof(uint16_t))) {
-		pr_err("%s: payload has invalid size[%d]\n", __func__,
-			data->payload_size);
-		return -EINVAL;
-	}
-
 	command = payload[0];
 	retcode = payload[1];
 	sid = (data->token >> 8) & 0x0F;
@@ -2162,8 +2134,7 @@ static int q6lsm_mmapcallback(struct apr_client_data *data, void *priv)
 	case LSM_SESSION_CMDRSP_SHARED_MEM_MAP_REGIONS:
 		if (atomic_read(&client->cmd_state) == CMD_STATE_WAIT_RESP) {
 			spin_lock_irqsave(&mmap_lock, flags);
-			if (mmap_handle_p)
-				*mmap_handle_p = command;
+			*mmap_handle_p = command;
 			/* spin_unlock_irqrestore implies barrier */
 			spin_unlock_irqrestore(&mmap_lock, flags);
 			atomic_set(&client->cmd_state, CMD_STATE_CLEARED);
@@ -2471,12 +2442,6 @@ int q6lsm_set_one_param(struct lsm_client *client,
 				       sizeof(struct param_hdr_v2);
 
 		if (param_type == LSM_REG_MULTI_SND_MODEL) {
-			if(list_empty(&client->stage_cfg[p_info->stage_idx].sound_models)) {
-				 pr_err("%s: sound_models list is empty \n",
-                                 __func__);
-				 return -EINVAL;
-			}
-
 			list_for_each_entry(sm,
 					    &client->stage_cfg[p_info->stage_idx].sound_models,
 					    list) {
@@ -3135,12 +3100,8 @@ int __init q6lsm_init(void)
 
 void q6lsm_exit(void)
 {
-	int i = 0;
 	lsm_delete_cal_data();
 
-	for (; i <= LSM_MAX_SESSION_ID; i++)
-		mutex_destroy(&lsm_common.common_client[i].cmd_lock);
-	mutex_destroy(&lsm_common.apr_lock);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(lsm_common.entry);
 	lsm_common.entry = NULL;

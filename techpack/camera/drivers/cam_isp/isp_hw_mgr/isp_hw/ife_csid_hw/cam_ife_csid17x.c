@@ -18,7 +18,6 @@
 #define CAM_CSID_VERSION_V170                 0x10070000
 #define CAM_CSID_VERSION_V175                 0x10070050
 #define CAM_CSID_VERSION_V480                 0x40080000
-#define CAM_CSID_VERSION_V165                 0x10060050
 
 static struct cam_ife_csid_hw_info cam_ife_csid170_hw_info = {
 	.csid_reg = &cam_ife_csid_170_reg_offset,
@@ -45,11 +44,6 @@ static struct cam_ife_csid_hw_info cam_ife_csid480_hw_info = {
 	.hw_dts_version = CAM_CSID_VERSION_V480,
 };
 
-static struct cam_ife_csid_hw_info cam_ife_csid165_204_hw_info = {
-	.csid_reg = &cam_ife_csid_175_200_reg_offset,
-	.hw_dts_version = CAM_CSID_VERSION_V165,
-};
-
 static const struct of_device_id cam_ife_csid17x_dt_match[] = {
 	{
 		.compatible = "qcom,csid170",
@@ -74,10 +68,6 @@ static const struct of_device_id cam_ife_csid17x_dt_match[] = {
 	{
 		.compatible = "qcom,csid580",
 		.data = &cam_ife_csid480_hw_info,
-	},
-	{
-		.compatible = "qcom,csid165_204",
-		.data = &cam_ife_csid165_204_hw_info,
 	},
 	{}
 };

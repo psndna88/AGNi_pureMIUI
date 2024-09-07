@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_SENSOR_I2C_H_
@@ -18,7 +18,7 @@
 #define I2C_COMPARE_MATCH 0
 #define I2C_COMPARE_MISMATCH 1
 
-#define I2C_REG_DATA_MAX (20*1024)
+#define I2C_REG_DATA_MAX (10*1024)
 
 /**
  * @client: CCI client structure

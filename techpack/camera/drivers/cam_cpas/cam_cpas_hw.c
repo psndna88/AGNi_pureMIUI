@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/device.h>
@@ -110,10 +110,6 @@ int cam_cpas_util_reg_update(struct cam_hw_info *cpas_hw,
 	int reg_base_index;
 
 	if (reg_info->enable == false)
-		return 0;
-
-	if (reg_info->is_fuse_based &&
-		!cam_cpas_is_feature_supported(CAM_CPAS_RT_OT_FUSE, 0xFF, 0))
 		return 0;
 
 	reg_base_index = cpas_core->regbase_index[reg_base];
@@ -1030,7 +1026,6 @@ static int cam_cpas_util_apply_default_axi_vote(
 	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
 	struct cam_cpas_axi_port *axi_port = NULL;
 	uint64_t mnoc_ab_bw = 0, mnoc_ib_bw = 0;
-	uint64_t applied_ab_bw = 0, applied_ib_bw = 0;
 	int rc = 0, i = 0;
 
 	mutex_lock(&cpas_core->tree_lock);
@@ -1058,8 +1053,6 @@ static int cam_cpas_util_apply_default_axi_vote(
 				mnoc_ab_bw, mnoc_ib_bw, rc);
 			goto unlock_tree;
 		}
-		cpas_core->axi_port[i].applied_ab_bw = applied_ab_bw;
-		cpas_core->axi_port[i].applied_ib_bw = applied_ib_bw;
 	}
 
 unlock_tree:
@@ -1551,7 +1544,6 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 	struct cam_cpas_private_soc *soc_private = NULL;
 	int rc = 0;
 	long result;
-	int retry_camnoc_idle = 0;
 
 	if (!hw_priv || !stop_args) {
 		CAM_ERR(CAM_CPAS, "Invalid arguments %pK %pK",
@@ -1605,18 +1597,6 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 			}
 		}
 
-		if (cpas_core->internal_ops.qchannel_handshake) {
-			rc = cpas_core->internal_ops.qchannel_handshake(
-				cpas_hw, false);
-			if (rc) {
-				CAM_ERR(CAM_CPAS,
-					"failed in qchannel_handshake rc=%d",
-					rc);
-				retry_camnoc_idle = 1;
-				/* Do not return error, passthrough */
-			}
-		}
-
 		rc = cam_cpas_soc_disable_irq(&cpas_hw->soc_info);
 		if (rc) {
 			CAM_ERR(CAM_CPAS, "disable_irq failed, rc=%d", rc);
@@ -1630,19 +1610,6 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 		if (result == 0) {
 			CAM_ERR(CAM_CPAS, "Wait failed: irq_count=%d",
 				atomic_read(&cpas_core->irq_count));
-		}
-
-		/* try again incase camnoc is still not idle */
-		if (cpas_core->internal_ops.qchannel_handshake &&
-			retry_camnoc_idle) {
-			rc = cpas_core->internal_ops.qchannel_handshake(
-				cpas_hw, false);
-			if (rc) {
-				CAM_ERR(CAM_CPAS,
-					"failed in qchannel_handshake rc=%d",
-					rc);
-				/* Do not return error, passthrough */
-			}
 		}
 
 		rc = cam_cpas_soc_disable_resources(&cpas_hw->soc_info,
@@ -1975,6 +1942,11 @@ static int cam_cpas_log_vote(struct cam_hw_info *cpas_hw)
 	else
 		CAM_DBG(CAM_CPAS, "No ops for print_poweron_settings");
 
+	if (cpas_core->internal_ops.print_poweron_settings)
+		cpas_core->internal_ops.print_poweron_settings(cpas_hw);
+	else
+		CAM_DBG(CAM_CPAS, "No ops for print_poweron_settings");
+
 	return 0;
 }
 
@@ -2034,6 +2006,9 @@ static void cam_cpas_update_monitor_array(struct cam_hw_info *cpas_hw,
 		uint32_t be_mnoc_offset =
 			soc_private->rpmh_info[CAM_RPMH_BCM_BE_OFFSET] +
 			(0x4 * soc_private->rpmh_info[CAM_RPMH_BCM_MNOC_INDEX]);
+		uint32_t be_shub_offset =
+			soc_private->rpmh_info[CAM_RPMH_BCM_BE_OFFSET] +
+			(0x4 * 1); /* i=1 for SHUB, hardcode for now */
 
 		/*
 		 * 0x4, 0x800 - DDR
@@ -2043,6 +2018,7 @@ static void cam_cpas_update_monitor_array(struct cam_hw_info *cpas_hw,
 		entry->fe_mnoc = cam_io_r_mb(rpmh_base + fe_mnoc_offset);
 		entry->be_ddr = cam_io_r_mb(rpmh_base + be_ddr_offset);
 		entry->be_mnoc = cam_io_r_mb(rpmh_base + be_mnoc_offset);
+		entry->be_shub = cam_io_r_mb(rpmh_base + be_shub_offset);
 	}
 
 	entry->camnoc_fill_level[0] = cam_io_r_mb(
@@ -2127,10 +2103,23 @@ static void cam_cpas_dump_monitor_array(
 
 		if (cpas_core->regbase_index[CAM_CPAS_REG_RPMH] != -1) {
 			CAM_INFO(CAM_CPAS,
-				"fe_ddr=0x%x, fe_mnoc=0x%x, be_ddr=0x%x, be_mnoc=0x%x",
+				"fe_ddr=0x%x, fe_mnoc=0x%x, be_ddr=0x%x, be_mnoc=0x%x, be_shub=0x%x",
 				entry->fe_ddr, entry->fe_mnoc,
-				entry->be_ddr, entry->be_mnoc);
+				entry->be_ddr, entry->be_mnoc, entry->be_shub);
 		}
+
+		CAM_INFO(CAM_CPAS,
+			"CAMNOC REG[Queued Pending] linear[%d %d] rdi0_wr[%d %d] ubwc_stats0[%d %d] ubwc_stats1[%d %d] rdi1_wr[%d %d]",
+			(entry->camnoc_fill_level[0] & 0x7FF),
+			(entry->camnoc_fill_level[0] & 0x7F0000) >> 16,
+			(entry->camnoc_fill_level[1] & 0x7FF),
+			(entry->camnoc_fill_level[1] & 0x7F0000) >> 16,
+			(entry->camnoc_fill_level[2] & 0x7FF),
+			(entry->camnoc_fill_level[2] & 0x7F0000) >> 16,
+			(entry->camnoc_fill_level[3] & 0x7FF),
+			(entry->camnoc_fill_level[3] & 0x7F0000) >> 16,
+			(entry->camnoc_fill_level[4] & 0x7FF),
+			(entry->camnoc_fill_level[4] & 0x7F0000) >> 16);
 
 		CAM_INFO(CAM_CPAS,
 			"CAMNOC REG[Queued Pending] linear[%d %d] rdi0_wr[%d %d] ubwc_stats0[%d %d] ubwc_stats1[%d %d] rdi1_wr[%d %d]",
@@ -2459,7 +2448,7 @@ int cam_cpas_hw_probe(struct platform_device *pdev,
 	cpas_hw->soc_info.dev_name = pdev->name;
 	cpas_hw->open_count = 0;
 	cpas_core->ahb_bus_scaling_disable = false;
-	cpas_core->full_state_dump = false;
+	cpas_core->full_state_dump = true;
 
 	atomic64_set(&cpas_core->monitor_head, -1);
 

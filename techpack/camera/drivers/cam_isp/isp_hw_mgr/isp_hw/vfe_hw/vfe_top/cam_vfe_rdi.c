@@ -14,7 +14,6 @@
 #include "cam_cdm_util.h"
 #include "cam_irq_controller.h"
 #include "cam_tasklet_util.h"
-#include "cam_cpas_api.h"
 
 struct cam_vfe_mux_rdi_data {
 	void __iomem                                *mem_base;
@@ -95,8 +94,7 @@ struct cam_vfe_mux_rdi_data *rdi_priv)
 	uint32_t  val;
 
 	if (soc_private->cpas_version == CAM_CPAS_TITAN_175_V120 ||
-		soc_private->cpas_version == CAM_CPAS_TITAN_175_V130 ||
-		soc_private->cpas_version == CAM_CPAS_TITAN_165_V100) {
+		soc_private->cpas_version == CAM_CPAS_TITAN_175_V130) {
 		rc = cam_cpas_reg_read(soc_private->cpas_handle,
 				CAM_CPAS_REG_CAMNOC, 0x3A20, true, &val);
 		if (rc) {
@@ -569,10 +567,6 @@ static int cam_vfe_rdi_handle_irq_bottom_half(void *handler_priv,
 			rdi_priv->event_cb(rdi_priv->priv,
 			CAM_ISP_HW_EVENT_ERROR,
 			(void *)&evt_info);
-
-		cam_cpas_get_camnoc_fifo_fill_level_info(
-			soc_private->cpas_version,
-			soc_private->cpas_handle);
 		cam_cpas_log_votes();
 	}
 end:

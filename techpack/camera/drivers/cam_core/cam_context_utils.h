@@ -28,7 +28,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx);
 int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 	struct cam_flush_dev_cmd *cmd);
 int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
-	struct cam_hw_mgr_dump_pf_data *pf_data, bool *mem_found, bool *ctx_found,
+	struct cam_packet *packet, bool *mem_found, bool *ctx_found,
 	uint32_t  *resource_type,
 	struct cam_smmu_pf_info *pf_info);
 int32_t cam_context_dump_hw_acq_info(struct cam_context *ctx);

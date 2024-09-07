@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _CAM_CDM_H_
@@ -24,7 +23,7 @@
 
 #define CAM_MAX_SW_CDM_VERSION_SUPPORTED  1
 #define CAM_SW_CDM_INDEX                  0
-#define CAM_CDM_INFLIGHT_WORKS            1
+#define CAM_CDM_INFLIGHT_WORKS            5
 #define CAM_CDM_HW_RESET_TIMEOUT          300
 
 /*
@@ -84,7 +83,6 @@
 #define CAM_CDM_RESET_HW_STATUS 0x4
 #define CAM_CDM_ERROR_HW_STATUS 0x5
 #define CAM_CDM_FLUSH_HW_STATUS 0x6
-#define CAM_CDM_RESET_ERR_STATUS 0x7
 
 /* Curent BL command masks and shifts */
 #define CAM_CDM_CURRENT_BL_LEN   0xFFFFF
@@ -109,14 +107,6 @@
 	(CAM_CDM_IRQ_STATUS_ERROR_INV_CMD_MASK | \
 	 CAM_CDM_IRQ_STATUS_ERROR_OVER_FLOW_MASK | \
 	 CAM_CDM_IRQ_STATUS_ERROR_AHB_BUS_MASK)
-
-
-struct cam_cdm_pid_mid_data {
-	int cdm_pid;
-	int cdm_mid;
-	int ope_cdm_pid;
-	int ope_cdm_mid;
-};
 
 /* Structure to store hw version info */
 struct cam_version_reg {
@@ -361,7 +351,6 @@ struct cam_cdm_common_regs {
 	const struct cam_cdm_icl_regs *icl_reg;
 	uint32_t spare;
 	uint32_t priority_group_bit_offset;
-	struct cam_cdm_pid_mid_data *cdm_pid_mid_info;
 };
 
 /**

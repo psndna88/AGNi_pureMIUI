@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_ISP_H__
@@ -365,8 +365,8 @@ struct cam_isp_in_port_info {
  *                                        CAM_ISP_SFE_INLINE_PIX)
  *                              This will acquire SFE inline IPP and IFE IPP
  *                              PPP is an exception CSID PPP -> IFE PPP
+ * @vc_dt_pattern_id:           TPG pattern - SparsePD, sHDR etc.
  * @feature_flag:               See the macros defined under feature flag above
- * @ife_res_1:                  payload for future use
  * @ife_res_2:                  payload for future use
  * @data:                       payload that contains the output resources
  *
@@ -401,8 +401,8 @@ struct cam_isp_in_port_info_v2 {
 	__u32                           horizontal_bin;
 	__u32                           qcfa_bin;
 	__u32                           sfe_in_path_type;
+	__u32                           vc_dt_pattern_id;
 	__u32                           feature_flag;
-	__u32                           ife_res_1;
 	__u32                           ife_res_2;
 	struct cam_isp_out_port_info_v2 data[1];
 };

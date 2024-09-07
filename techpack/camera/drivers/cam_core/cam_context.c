@@ -297,7 +297,6 @@ int cam_context_dump_pf_info(struct cam_context *ctx,
 		return -EINVAL;
 	}
 
-	mutex_lock(&ctx->ctx_mutex);
 	if ((ctx->state > CAM_CTX_AVAILABLE) &&
 		(ctx->state < CAM_CTX_STATE_MAX)) {
 		if (ctx->state_machine[ctx->state].pagefault_ops) {
@@ -306,32 +305,6 @@ int cam_context_dump_pf_info(struct cam_context *ctx,
 		} else {
 			CAM_WARN(CAM_CORE, "No dump ctx in dev %d, state %d",
 				ctx->dev_hdl, ctx->state);
-		}
-	}
-	mutex_unlock(&ctx->ctx_mutex);
-
-	return rc;
-}
-
-int cam_context_handle_message(struct cam_context *ctx,
-	uint32_t msg_type, uint32_t *data)
-{
-	int rc = 0;
-
-	if (!ctx->state_machine) {
-		CAM_ERR(CAM_CORE, "Context is not ready");
-		return -EINVAL;
-	}
-
-	if ((ctx->state > CAM_CTX_AVAILABLE) &&
-		(ctx->state < CAM_CTX_STATE_MAX)) {
-		if (ctx->state_machine[ctx->state].msg_cb_ops) {
-			rc = ctx->state_machine[ctx->state].msg_cb_ops(
-				ctx, msg_type, data);
-		} else {
-			CAM_WARN(CAM_CORE,
-				"No message handler for ctx %d, state %d msg_type :%d",
-				ctx->dev_hdl, ctx->state, msg_type);
 		}
 	}
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2010-2014, 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2014, 2016-2020 The Linux Foundation. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -23,7 +23,6 @@
 #include <linux/ipc_logging.h>
 #include <linux/of_platform.h>
 #include <linux/ratelimit.h>
-#include <soc/qcom/boot_stats.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <linux/qcom_scm.h>
 #include <soc/snd_event.h>
@@ -31,7 +30,6 @@
 #include <dsp/audio_notifier.h>
 #include <ipc/apr.h>
 #include <ipc/apr_tal.h>
-#include <linux/mmhardware_sysfs.h>
 
 #define APR_PKT_IPC_LOG_PAGE_CNT 2
 
@@ -249,7 +247,7 @@ void apr_set_modem_state(enum apr_subsys_state state)
 }
 EXPORT_SYMBOL(apr_set_modem_state);
 
-static enum apr_subsys_state apr_cmpxchg_modem_state(enum apr_subsys_state prev,
+enum apr_subsys_state apr_cmpxchg_modem_state(enum apr_subsys_state prev,
 					      enum apr_subsys_state new)
 {
 	return atomic_cmpxchg(&q6.modem_state, prev, new);
@@ -316,12 +314,8 @@ static void apr_add_child_devices(struct work_struct *work)
 static void apr_adsp_up(void)
 {
 	pr_info("%s: Q6 is Up\n", __func__);
-	place_marker("M - ADSP Ready");
 	apr_set_q6_state(APR_SUBSYS_LOADED);
-	/* register adsp hardware */
-#ifdef CONFIG_MMHARDWARE_DETECTION
-	register_kobj_under_mmsysfs(MM_HW_ADSP, MM_HARDWARE_SYSFS_ADSP_FOLDER);
-#endif
+
 	spin_lock(&apr_priv->apr_lock);
 	if (apr_priv->is_initial_boot)
 		schedule_work(&apr_priv->add_chld_dev_work);

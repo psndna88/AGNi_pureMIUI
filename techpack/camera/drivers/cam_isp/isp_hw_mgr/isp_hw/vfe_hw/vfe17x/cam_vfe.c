@@ -10,10 +10,8 @@
 #include "cam_vfe175_130.h"
 #include "cam_vfe480.h"
 #include "cam_vfe580.h"
-#include "cam_vfe165_160.h"
 #include "cam_vfe_lite17x.h"
 #include "cam_vfe_lite48x.h"
-#include "cam_vfe_lite16x.h"
 #include "cam_vfe_hw_intf.h"
 #include "cam_vfe_core.h"
 #include "cam_vfe_dev.h"
@@ -45,10 +43,6 @@ static const struct of_device_id cam_vfe_dt_match[] = {
 		.data = &cam_vfe580_hw_info,
 	},
 	{
-		.compatible = "qcom,vfe165_160",
-		.data = &cam_vfe165_160_hw_info,
-	},
-	{
 		.compatible = "qcom,vfe-lite170",
 		.data = &cam_vfe_lite17x_hw_info,
 	},
@@ -63,10 +57,6 @@ static const struct of_device_id cam_vfe_dt_match[] = {
 	{
 		.compatible = "qcom,vfe-lite580",
 		.data = &cam_vfe_lite48x_hw_info,
-	},
-	{
-		.compatible = "qcom,vfe-lite165",
-		.data = &cam_vfe_lite16x_hw_info,
 	},
 	{}
 };

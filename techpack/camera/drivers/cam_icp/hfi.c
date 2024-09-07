@@ -853,9 +853,9 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
 			break;
 
 		if (status == ICP_INIT_RESP_FAILED) {
-			CAM_ERR(CAM_HFI,
-				"ICP Init Failed. status %u fw version :[%x]",
-				status, fw_version);
+			CAM_ERR(CAM_HFI, "ICP Init Failed. status = %u",
+				status);
+			CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
 			goto regions_fail;
 		}
 		retry_cnt++;
@@ -863,13 +863,18 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
 
 	if ((retry_cnt == HFI_MAX_POLL_TRY) &&
 		(status != ICP_INIT_RESP_SUCCESS)) {
-		CAM_ERR(CAM_HFI,
-			"Reached Max retries. status = %u fw version : [%x]",
-				status, fw_version);
+		CAM_ERR(CAM_HFI, "Reached Max retries. status = %u",
+				status);
+		CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
+
+		status =
+			cam_io_r_mb(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE);
+		if (status != ICP_INIT_RESP_SUCCESS)
+			BUG();
 		goto regions_fail;
 	}
 
-	CAM_INFO(CAM_HFI, "fw version : [%x]", fw_version);
+	CAM_WARN(CAM_HFI, "fw version : [%x]", fw_version);
 
 	g_hfi->hfi_state = HFI_READY;
 	g_hfi->cmd_q_state = true;

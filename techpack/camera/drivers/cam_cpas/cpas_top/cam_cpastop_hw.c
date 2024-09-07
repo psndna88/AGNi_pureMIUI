@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -27,18 +27,12 @@
 #include "cpastop_v580_custom.h"
 #include "cpastop_v540_100.h"
 #include "cpastop_v520_100.h"
-#include "cpastop_v520_110.h"
 #include "cpastop_v545_100.h"
-#include "cpastop_v545_110.h"
 #include "cpastop_v570_200.h"
 #include "cpastop_v680_100.h"
-#include "cpastop_v165_100.h"
 #include "cam_req_mgr_workq.h"
-#include "cam_common_util.h"
 
 struct cam_camnoc_info *camnoc_info;
-struct cam_cpas_camnoc_qchannel *qchannel_info;
-
 
 #define CAMNOC_SLAVE_MAX_ERR_CODE 7
 static const char * const camnoc_salve_err_code[] = {
@@ -103,7 +97,7 @@ static const uint32_t cam_cpas_hw_version_map
 	{
 		CAM_CPAS_TITAN_520_V100,
 		0,
-		CAM_CPAS_TITAN_520_V110,
+		0,
 		0,
 		0,
 		0,
@@ -122,7 +116,7 @@ static const uint32_t cam_cpas_hw_version_map
 	{
 		CAM_CPAS_TITAN_545_V100,
 		0,
-		CAM_CPAS_TITAN_545_V110,
+		0,
 		0,
 		0,
 		0,
@@ -135,24 +129,6 @@ static const uint32_t cam_cpas_hw_version_map
 		0,
 		0,
 		CAM_CPAS_TITAN_570_V200,
-	},
-	/* for camera_680 */
-	{
-		CAM_CPAS_TITAN_680_V100,
-		0,
-		0,
-		0,
-		0,
-		0,
-	},
-	/* for camera_165 */
-	{
-		CAM_CPAS_TITAN_165_V100,
-		0,
-		0,
-		0,
-		0,
-		0,
 	},
 };
 
@@ -203,10 +179,6 @@ static int cam_cpas_translate_camera_cpas_version_id(
 
 	case CAM_CPAS_CAMERA_VERSION_680:
 		*cam_version_id = CAM_CPAS_CAMERA_VERSION_ID_680;
-		break;
-
-	case CAM_CPAS_CAMERA_VERSION_165:
-		*cam_version_id = CAM_CPAS_CAMERA_VERSION_ID_165;
 		break;
 
 	default:
@@ -600,10 +572,8 @@ static void cam_cpastop_work(struct work_struct *work)
 		return;
 	}
 
-	cam_common_util_thread_switch_delay_detect(
-		"CPAS workq schedule",
-		payload->workq_scheduled_ts,
-		CAM_WORKQ_SCHEDULE_TIME_THRESHOLD);
+	cam_req_mgr_thread_switch_delay_detect(
+			payload->workq_scheduled_ts);
 
 	cpas_hw = payload->hw;
 	cpas_core = (struct cam_cpas *) cpas_hw->core_info;
@@ -825,65 +795,11 @@ static int cam_cpastop_poweroff(struct cam_hw_info *cpas_hw)
 	return rc;
 }
 
-static int cam_cpastop_qchannel_handshake(struct cam_hw_info *cpas_hw,
-	bool power_on)
-{
-	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
-	struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
-	int32_t reg_indx = cpas_core->regbase_index[CAM_CPAS_REG_CPASTOP];
-	uint32_t mask = 0;
-	uint32_t wait_data, qchannel_status, qdeny;
-	int rc = 0;
-
-	if (reg_indx == -1)
-		return -EINVAL;
-
-	if (!qchannel_info)
-		return 0;
-
-	if (power_on) {
-		/* wait for QACCEPTN in QCHANNEL status*/
-		mask = BIT(0);
-		wait_data = 1;
-	} else {
-		/* Clear the quiecience request in QCHANNEL ctrl*/
-		cam_io_w_mb(0, soc_info->reg_map[reg_indx].mem_base +
-			qchannel_info->qchannel_ctrl);
-		/* wait for QACCEPTN and QDENY in QCHANNEL status*/
-		mask = BIT(1) | BIT(0);
-		wait_data = 0;
-	}
-
-	rc = cam_io_poll_value_wmask(
-		soc_info->reg_map[reg_indx].mem_base +
-		qchannel_info->qchannel_status,
-		wait_data, mask, CAM_CPAS_POLL_QH_RETRY_CNT,
-		CAM_CPAS_POLL_MIN_USECS, CAM_CPAS_POLL_MAX_USECS);
-	if (rc) {
-		CAM_ERR(CAM_CPAS,
-			"camnoc idle sequence failed, qstat 0x%x",
-			cam_io_r(soc_info->reg_map[reg_indx].mem_base +
-			qchannel_info->qchannel_status));
-		/* Do not return error, passthrough */
-		rc = 0;
-	}
-
-	/* check if deny bit is set */
-	qchannel_status = cam_io_r_mb(soc_info->reg_map[reg_indx].mem_base +
-				qchannel_info->qchannel_status);
-	qdeny = (qchannel_status & BIT(1));
-	if (!power_on && qdeny)
-		rc = -EBUSY;
-
-	return rc;
-}
-
 static int cam_cpastop_init_hw_version(struct cam_hw_info *cpas_hw,
 	struct cam_cpas_hw_caps *hw_caps)
 {
 	int rc = 0;
 	struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
-	qchannel_info = NULL;
 
 	CAM_DBG(CAM_CPAS,
 		"hw_version=0x%x Camera Version %d.%d.%d, cpas version %d.%d.%d",
@@ -925,37 +841,21 @@ static int cam_cpastop_init_hw_version(struct cam_hw_info *cpas_hw,
 		break;
 	case CAM_CPAS_TITAN_580_V100:
 		camnoc_info = &cam580_cpas100_camnoc_info;
-		qchannel_info = &cam580_cpas100_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_540_V100:
 		camnoc_info = &cam540_cpas100_camnoc_info;
-		qchannel_info = &cam540_cpas100_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_520_V100:
 		camnoc_info = &cam520_cpas100_camnoc_info;
-		qchannel_info = &cam520_cpas100_qchannel_info;
-		break;
-	case CAM_CPAS_TITAN_520_V110:
-		camnoc_info = &cam520_cpas110_camnoc_info;
-		qchannel_info = &cam520_cpas110_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_545_V100:
 		camnoc_info = &cam545_cpas100_camnoc_info;
-		qchannel_info = &cam545_cpas100_qchannel_info;
-		break;
-	case CAM_CPAS_TITAN_545_V110:
-		camnoc_info = &cam545_cpas110_camnoc_info;
-		qchannel_info = &cam545_cpas110_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_570_V200:
 		camnoc_info = &cam570_cpas200_camnoc_info;
-		qchannel_info = &cam570_cpas200_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_680_V100:
 		camnoc_info = &cam680_cpas100_camnoc_info;
-		break;
-	case CAM_CPAS_TITAN_165_V100:
-		camnoc_info = &cam165_cpas100_camnoc_info;
 		break;
 	default:
 		CAM_ERR(CAM_CPAS, "Camera Version not supported %d.%d.%d",
@@ -1019,127 +919,6 @@ static int cam_cpastop_setup_qos_settings(struct cam_hw_info *cpas_hw,
 	return rc;
 }
 
-int cam_cpas_hw_get_camnoc_fill_level_info(
-	uint32_t cpas_version,
-	uint32_t client_handle)
-{
-	struct cam_camnoc_fifo_lvl_info *camnoc_reg_info;
-	uint32_t val;
-
-	if (!camnoc_info->fill_lvl_register)
-		return -EFAULT;
-
-	camnoc_reg_info = camnoc_info->fill_lvl_register;
-
-	switch (cpas_version) {
-	case CAM_CPAS_TITAN_175_V120:
-	case CAM_CPAS_TITAN_175_V130:
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC,
-			camnoc_reg_info->IFE0_nRDI_maxwr_offset,
-			true, &val);
-		CAM_INFO(CAM_CPAS, "IFE0_nRDI_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE0_nRDI_maxwr_offset,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC,
-			camnoc_reg_info->IFE1_nRDI_maxwr_offset,
-			true, &val);
-		CAM_INFO(CAM_CPAS, "IFE1_nRDI_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE1_nRDI_maxwr_offset,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC,
-			camnoc_reg_info->IFE0123_RDI_maxwr_offset,
-			true, &val);
-		CAM_INFO(CAM_CPAS, "IFE0_nRDI_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE0123_RDI_maxwr_offset,
-			val);
-		break;
-	case CAM_CPAS_TITAN_480_V100:
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->ife_linear,
-			true, &val);
-		CAM_INFO(CAM_CPAS, "ife_linear offset 0x%x val 0x%x",
-			camnoc_reg_info->ife_linear,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->ife_rdi_wr,
-			true, &val);
-		CAM_INFO(CAM_CPAS, "ife_rdi_wr offset 0x%x val 0x%x",
-			camnoc_reg_info->ife_rdi_wr,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->ife_ubwc_stats,
-			true, &val);
-		CAM_INFO(CAM_CPAS, "ife_ubwc_stats offset 0x%x val 0x%x",
-			camnoc_reg_info->ife_ubwc_stats,
-			val);
-
-		break;
-	case CAM_CPAS_TITAN_170_V200:
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE01_MAXWR_LOW,
-			true, &val);
-		CAM_INFO(CAM_ISP, "IFE01_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE01_MAXWR_LOW,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE23_MAXWR_LOW,
-			true, &val);
-		CAM_INFO(CAM_ISP, "IFE23_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE23_MAXWR_LOW,
-			val);
-
-		break;
-	case CAM_CPAS_TITAN_165_V100:
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE0_MAXWR_LOW,
-			true, &val);
-		CAM_INFO(CAM_ISP, "IFE0_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE0_MAXWR_LOW,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE1_MAXWR_LOW,
-			true, &val);
-		CAM_INFO(CAM_ISP, "IFE1_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE1_MAXWR_LOW,
-			val);
-		break;
-	case CAM_CPAS_TITAN_150_V100:
-	case CAM_CPAS_TITAN_170_V100:
-	case CAM_CPAS_TITAN_170_V110:
-	case CAM_CPAS_TITAN_170_V120:
-	case CAM_CPAS_TITAN_175_V100:
-	case CAM_CPAS_TITAN_175_V101:
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE02_MAXWR_LOW,
-			true, &val);
-		CAM_INFO(CAM_ISP, "IFE02_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE02_MAXWR_LOW,
-			val);
-
-		cam_cpas_reg_read(client_handle,
-			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE13_MAXWR_LOW,
-			true, &val);
-		CAM_INFO(CAM_ISP, "IFE13_MAXWR_LOW offset 0x%x val 0x%x",
-			camnoc_reg_info->IFE13_MAXWR_LOW,
-			val);
-		break;
-	default:
-		CAM_ERR(CAM_CPAS, "Camera version not supported %d",
-			cpas_version);
-		break;
-	}
-	return 0;
-}
-
 int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 {
 	if (!internal_ops) {
@@ -1156,7 +935,6 @@ int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 	internal_ops->setup_qos_settings = cam_cpastop_setup_qos_settings;
 	internal_ops->print_poweron_settings =
 		cam_cpastop_print_poweron_settings;
-	internal_ops->qchannel_handshake = cam_cpastop_qchannel_handshake;
 
 	return 0;
 }

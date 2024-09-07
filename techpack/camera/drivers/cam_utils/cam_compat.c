@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/dma-mapping.h>
@@ -201,7 +201,6 @@ int camera_component_match_add_drivers(struct device *master_dev,
 {
 	int i, rc = 0;
 	struct platform_device *pdev = NULL;
-	struct device *start_dev = NULL, *match_dev = NULL;
 
 	if (!master_dev || !match_list) {
 		CAM_ERR(CAM_UTIL, "Invalid parameters for component match add");
@@ -218,12 +217,14 @@ int camera_component_match_add_drivers(struct device *master_dev,
 		struct device_driver *drv = &cam_component_drivers[i]->driver;
 		void *drv_ptr = (void *)drv;
 #endif
-		start_dev = NULL;
+		struct device *start_dev = NULL, *match_dev;
+
 		while ((match_dev = bus_find_device(&platform_bus_type,
 			start_dev, drv_ptr, &camera_platform_compare_dev))) {
 			put_device(start_dev);
 			pdev = to_platform_device(match_dev);
-			CAM_DBG(CAM_UTIL, "Adding matched component:%s", pdev->name);
+			CAM_DBG(CAM_UTIL, "Adding matched component:%s",
+				pdev->name);
 			component_match_add(master_dev, match_list,
 				camera_component_compare_dev, match_dev);
 			start_dev = match_dev;

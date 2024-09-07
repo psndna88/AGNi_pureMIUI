@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/slab.h>
 #include <linux/fs.h>
@@ -459,7 +458,6 @@ static void delete_cal_block(struct cal_block_data *cal_block)
 		cal_block->map_data.dma_buf = NULL;
 	}
 	kfree(cal_block);
-	cal_block = NULL;
 done:
 	return;
 }

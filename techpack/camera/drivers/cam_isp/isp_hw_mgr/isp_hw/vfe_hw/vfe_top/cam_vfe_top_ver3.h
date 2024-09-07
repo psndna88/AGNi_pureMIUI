@@ -17,7 +17,6 @@
 #define CAM_SHIFT_TOP_CORE_CFG_DISP_DS16_R2PD    28
 #define CAM_SHIFT_TOP_CORE_CFG_DISP_DS4_R2PD     27
 #define CAM_SHIFT_TOP_CORE_CFG_DSP_STREAMING     25
-#define CAM_SHIFT_TOP_CORE_CFG_INPUT_PP_FMT      14
 #define CAM_SHIFT_TOP_CORE_CFG_STATS_IHIST       10
 #define CAM_SHIFT_TOP_CORE_CFG_STATS_HDR_BE       9
 #define CAM_SHIFT_TOP_CORE_CFG_STATS_HDR_BHIST    8
@@ -76,7 +75,6 @@ struct cam_vfe_camif_common_cfg {
 	uint32_t     hdr_bhist_src_sel;
 	uint32_t     input_mux_sel_pdaf;
 	uint32_t     input_mux_sel_pp;
-	uint32_t     input_pp_fmt;
 };
 
 struct cam_vfe_top_ver3_hw_info {

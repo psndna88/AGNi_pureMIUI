@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -79,11 +79,8 @@ static int cam_ife_csid_component_bind(struct device *dev,
 	csid_dev->csid_info = csid_hw_data;
 
 	rc = cam_ife_csid_hw_probe_init(csid_hw_intf, csid_dev_idx, false);
-	if (rc) {
-		if (rc == -ENODEV)
-			rc = 0;
+	if (rc)
 		goto free_dev;
-	}
 
 	platform_set_drvdata(pdev, csid_dev);
 	CAM_DBG(CAM_ISP, "CSID:%d component bound successfully",

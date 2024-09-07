@@ -373,10 +373,8 @@ static void aw882xx_start_pa(struct aw882xx *aw882xx)
 
 		for (i = 0; i < AW_START_RETRIES; i++) {
 			/*if PA already power ,stop PA then start*/
-			if (aw882xx->aw_pa->status) {
-				aw_dev_info(aw882xx->dev, "PA already power return ");
-				return;
-			}
+			if (aw882xx->aw_pa->status)
+				aw_device_stop(aw882xx->aw_pa);
 
 			ret = aw_dev_reg_update(aw882xx->aw_pa, aw882xx->phase_sync);
 			if (ret) {
@@ -408,9 +406,8 @@ static int aw882xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 	aw_snd_soc_codec_t *codec = aw_get_codec(dai);
 	struct aw882xx *aw882xx =
 		aw_componet_codec_ops.codec_get_drvdata(codec);
-	int ret;
 
-	aw_dev_err(aw882xx->dev, "mute state=%d", mute);
+	aw_dev_info(aw882xx->dev, "mute state=%d", mute);
 
 	if (stream != SNDRV_PCM_STREAM_PLAYBACK) {
 		aw_dev_info(aw882xx->dev, "capture");
@@ -423,34 +420,17 @@ static int aw882xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 		cancel_delayed_work_sync(&aw882xx->start_work);
 		mutex_lock(&aw882xx->lock);
 		aw_device_stop(aw882xx->aw_pa);
-		if(gpio_is_valid(aw882xx->spk_sw_gpio)){
-			  aw_dev_info(aw882xx->dev, "pull down spk_sw_gpio");
-		     gpio_direction_output(aw882xx->spk_sw_gpio,0);
-		}
 		mutex_unlock(&aw882xx->lock);
 	} else {
 		if (aw882xx->fw_status == AW_DEV_FW_FAILED) {
 			aw_dev_info(aw882xx->dev, "fw_load failed ,can not start PA");
 			return 0;
 		}
-
-		ret = aw_dev_get_profile_index(aw882xx->aw_pa);//(int) aw882xx->aw_pa->cur_prof;
-		aw_dev_err(aw882xx->dev, "aw882xx->aw_pa->cur_prof  %d ret %d ",aw882xx->aw_pa->cur_prof,ret);
-		aw_dev_err(aw882xx->dev, "aw882xx->i2c->addr %x ",aw882xx->i2c->addr);
-		if(aw882xx->i2c->addr == 0x34){
-	         if(ret == AW_PROFILE_VOICE){//rcv mode
-		          aw_dev_err(aw882xx->dev, "cur_prof rcv");
-		          gpio_direction_output(aw882xx->spk_sw_gpio,1);
-	          }else{
-		          aw_dev_err(aw882xx->dev, "cur_prof music");
-		          gpio_direction_output(aw882xx->spk_sw_gpio,0);
-	        }
-		}
 		aw882xx->pstream = true;
 		mutex_lock(&aw882xx->lock);
-		aw882xx_start_pa(aw882xx);
-		/*queue_delayed_work(aw882xx->work_queue,
-				&aw882xx->start_work, 0);*/
+		/*aw882xx_start_pa(aw882xx);*/
+		queue_delayed_work(aw882xx->work_queue,
+				&aw882xx->start_work, 0);
 		mutex_unlock(&aw882xx->lock);
 	}
 
@@ -753,20 +733,9 @@ static void aw882xx_request_firmware(struct work_struct *work)
 static void aw882xx_startup_work(struct work_struct *work)
 {
 	struct aw882xx *aw882xx = container_of(work, struct aw882xx, start_work.work);
-	int ret;
-	aw_dev_err(aw882xx->dev, "enter");
-	ret = aw_dev_get_profile_index(aw882xx->aw_pa);//(int)aw882xx->aw_pa->cur_prof;
-	aw_dev_err(aw882xx->dev, "aw882xx->aw_pa->cur_prof  %d ret %d ",aw882xx->aw_pa->cur_prof,ret);
-	aw_dev_err(aw882xx->dev, "aw882xx->i2c->addr %x ",aw882xx->i2c->addr);
-	if(aw882xx->i2c->addr == 0x34){
-	        if(ret == AW_PROFILE_VOICE){//rcv mode
-		        aw_dev_err(aw882xx->dev, "cur_prof rcv");
-		        gpio_direction_output(aw882xx->spk_sw_gpio,1);
-	        }else{
-		         aw_dev_err(aw882xx->dev, "cur_prof music");
-		         gpio_direction_output(aw882xx->spk_sw_gpio,0);
-	         }
-	   }
+
+	aw_dev_info(aw882xx->dev, "enter");
+
 	mutex_lock(&aw882xx->lock);
 	aw882xx_start_pa(aw882xx);
 	mutex_unlock(&aw882xx->lock);
@@ -794,7 +763,7 @@ static void aw882xx_dc_prot_work(struct work_struct *work)
 		}
 	}
 }
-#if 0
+
 static void aw882xx_irq_restart(struct aw882xx *aw882xx)
 {
 	int ret;
@@ -863,7 +832,6 @@ static void aw882xx_interrupt_work(struct work_struct *work)
 	/*unmask interrupt*/
 	aw_dev_set_intmask(aw882xx->aw_pa, true);
 }
-#endif
 
 static int aw882xx_set_rx_en(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -1310,7 +1278,7 @@ static int aw882xx_codec_probe(aw_snd_soc_codec_t *aw_codec)
 	}
 
 	INIT_DELAYED_WORK(&aw882xx->start_work, aw882xx_startup_work);
-	//INIT_DELAYED_WORK(&aw882xx->interrupt_work, aw882xx_interrupt_work);
+	INIT_DELAYED_WORK(&aw882xx->interrupt_work, aw882xx_interrupt_work);
 	INIT_DELAYED_WORK(&aw882xx->dc_work, aw882xx_dc_prot_work);
 	INIT_DELAYED_WORK(&aw882xx->fw_work, aw882xx_request_firmware);
 
@@ -1463,7 +1431,6 @@ static int aw882xx_parse_gpio_dt(struct aw882xx *aw882xx,
 	if (!np) {
 		aw882xx->reset_gpio = -1;
 		aw882xx->irq_gpio = -1;
-		aw882xx->spk_sw_gpio=-1;
 		return -EINVAL;
 	}
 
@@ -1482,15 +1449,6 @@ static int aw882xx_parse_gpio_dt(struct aw882xx *aw882xx,
 		aw_dev_info(aw882xx->dev, "irq gpio provided ok.");
 	}
 
-	if(aw882xx->spk_sw_gpio != 101){
-	      aw882xx->spk_sw_gpio = of_get_named_gpio(np, "spk-sw-gpio", 0);
-	      if (aw882xx->spk_sw_gpio < 0){
-		     aw_dev_err(aw882xx->dev,"No spk_sw_gpio GPIO provided");
-           }else{
-		      aw_dev_info(aw882xx->dev, "spk_sw_gpio provided ok.");
-	        }
-	}
-	aw_dev_err(aw882xx->dev,"spk_sw_gpio is %d ",aw882xx->spk_sw_gpio);
 	return ret;
 }
 
@@ -1539,14 +1497,6 @@ static int aw882xx_gpio_request(struct aw882xx *aw882xx)
 		}
 	}
 
-		if (gpio_is_valid(aw882xx->spk_sw_gpio)) {
-		ret = devm_gpio_request_one(aw882xx->dev, aw882xx->spk_sw_gpio,
-			GPIOF_OUT_INIT_LOW, "aw882xx_spk_sw");
-		if (ret){
-			aw_dev_err(aw882xx->dev, "spk_sw request failed");
-			return ret;
-		}
-	}
 	return 0;
 }
 
@@ -1649,7 +1599,7 @@ static int aw882xx_read_chipid(struct aw882xx *aw882xx)
 
 	return -EINVAL;
 }
-#if 0
+
 static irqreturn_t aw882xx_irq(int irq, void *data)
 {
 	struct aw882xx *aw882xx = (struct aw882xx *)data;
@@ -1694,7 +1644,7 @@ static int aw882xx_interrupt_init(struct aw882xx *aw882xx)
 
 	return 0;
 }
-#endif
+
 static ssize_t aw882xx_reg_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -2182,7 +2132,7 @@ static int aw882xx_i2c_probe(struct i2c_client *i2c,
 		return ret;
 
 	/*aw882xx irq*/
-	//aw882xx_interrupt_init(aw882xx);
+	aw882xx_interrupt_init(aw882xx);
 
 	/*codec register*/
 	ret = aw_componet_codec_register(aw882xx);
@@ -2237,8 +2187,6 @@ static int aw882xx_i2c_remove(struct i2c_client *i2c)
 		devm_gpio_free(&i2c->dev, aw882xx->irq_gpio);
 	if (gpio_is_valid(aw882xx->reset_gpio))
 		devm_gpio_free(&i2c->dev, aw882xx->reset_gpio);
-	if (gpio_is_valid(aw882xx->spk_sw_gpio))
-		devm_gpio_free(&i2c->dev, aw882xx->spk_sw_gpio);
 
 	/*rm attr node*/
 	sysfs_remove_group(&i2c->dev.kobj, &aw882xx_attribute_group);

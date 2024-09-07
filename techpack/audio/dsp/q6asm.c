@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -14,7 +12,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/fs.h>
 #include <linux/mutex.h>
@@ -754,7 +751,7 @@ static int q6asm_map_cal_memory(int32_t cal_type,
 		goto done;
 	}
 
-	/* Use first asm buf to map memory */
+	/* Use second asm buf to map memory */
 	if (common_client.port[IN].buf == NULL) {
 		pr_err("%s: common buf is NULL\n",
 			__func__);
@@ -844,8 +841,6 @@ static int q6asm_unmap_cal_memory(int32_t cal_type,
 			goto done;
 		}
 	}
-
-	common_client.port[IN].buf->phys = cal_block->cal_data.paddr;
 
 	result2 = q6asm_memory_unmap_regions(&common_client, IN);
 	if (result2 < 0) {
@@ -2194,12 +2189,8 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 					payload[0], payload[1],
 					data->src_port, data->dest_port);
 				if (payload[1] != 0) {
-					if (adsp_err_get_lnx_err_code(payload[1]) != -EALREADY)
-						pr_err("%s: cmd = 0x%x returned error = 0x%x\n",
-							__func__, payload[0], payload[1]);
-					else
-						pr_debug("%s: cmd = 0x%x returned error = 0x%x\n",
-							__func__, payload[0], payload[1]);
+					pr_err("%s: cmd = 0x%x returned error = 0x%x\n",
+						__func__, payload[0], payload[1]);
 					if (wakeup_flag) {
 						if ((is_adsp_reg_event(payload[0]) >=
 						     0) ||
@@ -2360,7 +2351,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 			}
 			if ( data->payload_size >= 2 * sizeof(uint32_t) &&
 				(lower_32_bits(port->buf[buf_index].phys) !=
-				payload[0] || 
+				payload[0] ||
 				msm_audio_populate_upper_32_bits(
 					port->buf[buf_index].phys) != payload[1])) {
 				pr_debug("%s: Expected addr %pK\n",
@@ -2436,15 +2427,6 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 
 		config_debug_fs_read_cb();
 
-		if (data->payload_size != (READDONE_IDX_SEQ_ID + 1) * sizeof(uint32_t)) {
-			pr_err("%s:  payload size of %d is less than expected %d.\n",
-					__func__, data->payload_size,
-					((READDONE_IDX_SEQ_ID + 1) * sizeof(uint32_t)));
-			spin_unlock_irqrestore(
-				&(session[session_id].session_lock),
-				flags);
-			return -EINVAL;
-		}
 		dev_vdbg(ac->dev, "%s: ReadDone: status=%d buff_add=0x%x act_size=%d offset=%d\n",
 				__func__, payload[READDONE_IDX_STATUS],
 				payload[READDONE_IDX_BUFADD_LSW],
@@ -2552,16 +2534,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 				__func__, data->payload_size);
 		break;
 	case ASM_SESSION_CMDRSP_GET_MTMX_STRTR_PARAMS_V2:
-		payload_size = sizeof(struct asm_mtmx_strtr_get_params_cmdrsp);
-		if (data->payload_size < payload_size) {
-			pr_err("%s: insufficient payload size = %d\n",
-				__func__, data->payload_size);
-			spin_unlock_irqrestore(
-				&(session[session_id].session_lock), flags);
-			return -EINVAL;
-		}
-		q6asm_process_mtmx_get_param_rsp(ac,
-			(struct asm_mtmx_strtr_get_params_cmdrsp *) payload);
+		q6asm_process_mtmx_get_param_rsp(ac, (void *) payload);
 		break;
 	case ASM_STREAM_PP_EVENT:
 	case ASM_STREAM_CMD_ENCDEC_EVENTS:
@@ -2589,8 +2562,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		if (payload_size > UINT_MAX - sizeof(struct msm_adsp_event_data)) {
 			pr_err("%s: payload size = %d exceeds limit.\n",
 				__func__, payload_size);
-			spin_unlock_irqrestore(
-				&(session[session_id].session_lock), flags);
+			spin_unlock(&(session[session_id].session_lock));
 			return -EINVAL;
 		}
 
@@ -3387,12 +3359,7 @@ static int __q6asm_open_read(struct audio_client *ac,
 	if (ac->perf_mode == LOW_LATENCY_PCM_MODE) {
 		open.mode_flags |= ASM_LOW_LATENCY_TX_STREAM_SESSION <<
 			ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ;
-	} 
-	else if (ac->perf_mode == LOW_LATENCY_PCM_NOPROC_MODE) {
-		open.mode_flags |= ASM_LOW_LATENCY_NPROC_TX_STREAM_SESSION <<
-			ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ;
-	}
-	else {
+	} else {
 		open.mode_flags |= ASM_LEGACY_STREAM_SESSION <<
 			ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ;
 	}
@@ -3461,12 +3428,11 @@ static int __q6asm_open_read(struct audio_client *ac,
 		goto fail_cmd;
 	}
 	if (atomic_read(&ac->cmd_state) > 0) {
+		pr_err("%s: DSP returned error[%s]\n",
+				__func__, adsp_err_get_err_str(
+				atomic_read(&ac->cmd_state)));
 		rc = adsp_err_get_lnx_err_code(
 				atomic_read(&ac->cmd_state));
-		if (rc != -EALREADY)
-			pr_err("%s: DSP returned error[%s]\n",
-					__func__, adsp_err_get_err_str(
-					atomic_read(&ac->cmd_state)));
 		goto fail_cmd;
 	}
 
@@ -3765,8 +3731,6 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 		open.mode_flags |= ASM_ULTRA_LOW_LATENCY_STREAM_SESSION;
 	else if (ac->perf_mode == LOW_LATENCY_PCM_MODE)
 		open.mode_flags |= ASM_LOW_LATENCY_STREAM_SESSION;
-	else if (ac->perf_mode == LOW_LATENCY_PCM_NOPROC_MODE)
-		open.mode_flags |= ASM_ULTRA_LOW_LATENCY_NPROC_STREAM_SESSION;
 	else {
 		open.mode_flags |= ASM_LEGACY_STREAM_SESSION;
 		if (is_gapless_mode)
@@ -3780,7 +3744,7 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.postprocopo_id = cal_info.topology_id;
 
-	if ((ac->perf_mode != LEGACY_PCM_MODE) && (ac->perf_mode != LOW_LATENCY_PCM_MODE))
+	if (ac->perf_mode != LEGACY_PCM_MODE)
 		open.postprocopo_id = ASM_STREAM_POSTPROCOPO_ID_NONE;
 
 	pr_debug("%s: perf_mode %d asm_topology 0x%x bps %d\n", __func__,
@@ -3873,12 +3837,11 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 		goto fail_cmd;
 	}
 	if (atomic_read(&ac->cmd_state) > 0) {
+		pr_err("%s: DSP returned error[%s]\n",
+				__func__, adsp_err_get_err_str(
+				atomic_read(&ac->cmd_state)));
 		rc = adsp_err_get_lnx_err_code(
 				atomic_read(&ac->cmd_state));
-		if (rc != -EALREADY)
-			pr_err("%s: DSP returned error[%s]\n",
-					__func__, adsp_err_get_err_str(
-					atomic_read(&ac->cmd_state)));
 		goto fail_cmd;
 	}
 	ac->io_mode |= TUN_WRITE_IO_MODE;
@@ -4224,12 +4187,11 @@ static int __q6asm_open_read_write(struct audio_client *ac, uint32_t rd_format,
 		goto fail_cmd;
 	}
 	if (atomic_read(&ac->cmd_state) > 0) {
+		pr_err("%s: DSP returned error[%s]\n",
+				__func__, adsp_err_get_err_str(
+				atomic_read(&ac->cmd_state)));
 		rc = adsp_err_get_lnx_err_code(
 				atomic_read(&ac->cmd_state));
-		if (rc != -EALREADY)
-			pr_err("%s: DSP returned error[%s]\n",
-					__func__, adsp_err_get_err_str(
-					atomic_read(&ac->cmd_state)));
 		goto fail_cmd;
 	}
 
@@ -5466,6 +5428,7 @@ int q6asm_enc_cfg_blk_pcm_v5(struct audio_client *ac,
 fail_cmd:
 	return rc;
 }
+EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_v5);
 
 /*
  * q6asm_enc_cfg_blk_pcm_v4 - sends encoder configuration parameters
@@ -8858,8 +8821,6 @@ int q6asm_memory_map_regions(struct audio_client *ac, int dir,
 	}
 	mmap_regions = (struct avs_cmd_shared_mem_map_regions *)
 							mmap_region_cmd;
-
-	mutex_lock(&ac->cmd_lock);
 	q6asm_add_mmaphdr(ac, &mmap_regions->hdr, cmd_size, dir);
 	atomic_set(&ac->mem_state, -1);
 	pr_debug("%s: mmap_region=0x%pK token=0x%x\n", __func__,
@@ -8917,6 +8878,7 @@ int q6asm_memory_map_regions(struct audio_client *ac, int dir,
 		buffer_node = NULL;
 		goto fail_cmd;
 	}
+	mutex_lock(&ac->cmd_lock);
 
 	for (i = 0; i < bufcnt; i++) {
 		ab = &port->buf[i];
@@ -8929,13 +8891,14 @@ int q6asm_memory_map_regions(struct audio_client *ac, int dir,
 			buffer_node[i].mmap_hdl);
 	}
 	ac->port[dir].tmp_hdl = 0;
+	mutex_unlock(&ac->cmd_lock);
 	rc = 0;
 fail_cmd:
-	mutex_unlock(&ac->cmd_lock);
 	kfree(mmap_region_cmd);
 	mmap_region_cmd = NULL;
 	return rc;
 }
+EXPORT_SYMBOL(q6asm_memory_map_regions);
 
 /**
  * q6asm_memory_unmap_regions -
@@ -11397,7 +11360,7 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struc
 			goto unlock;
 		}
 	} else {
-		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL, 0, 0, path);
+		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL, 0, 0, ac->fedai_id);
 		if (cal_block == NULL) {
 			pr_debug("%s: Couldn't find cal_block with buf_number, re-routing "
 				"search using CAL type only\n", __func__);
@@ -11422,7 +11385,7 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struc
 unlock:
 	mutex_unlock(&cal_data[ASM_TOPOLOGY_CAL]->lock);
 done:
-	pr_debug("%s: Using topology %d app_type %d\n", __func__,
+	pr_err("%s: Using topology %d app_type %d\n", __func__,
 			cal_info->topology_id, cal_info->app_type);
 
 	return 0;
@@ -11747,13 +11710,5 @@ int __init q6asm_init(void)
 
 void q6asm_exit(void)
 {
-	int lcnt;
 	q6asm_delete_cal_data();
-	for (lcnt = 0; lcnt <= OUT; lcnt++)
-		mutex_destroy(&common_client.port[lcnt].lock);
-
-	mutex_destroy(&common_client.cmd_lock);
-
-	for (lcnt = 0; lcnt <= ASM_ACTIVE_STREAMS_ALLOWED; lcnt++)
-		mutex_destroy(&(session[lcnt].mutex_lock_per_session));
 }

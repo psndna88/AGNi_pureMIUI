@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_IFE_CSID_175_200_H_
@@ -47,7 +47,6 @@ static struct cam_ife_csid_pxl_reg_offset
 	/* configurations */
 	.pix_store_en_shift_val              = 7,
 	.early_eof_en_shift_val              = 29,
-	.horizontal_bin_en_shift_val         = 2,
 	.quad_cfa_bin_en_shift_val           = 30,
 	.ccif_violation_en                   = 1,
 };

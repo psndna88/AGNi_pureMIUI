@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -1015,6 +1014,7 @@ static int wsa_macro_event_handler(struct snd_soc_component *component,
 
 	switch (event) {
 	case BOLERO_MACRO_EVT_SSR_DOWN:
+		trace_printk("%s, enter SSR down\n", __func__);
 		if (wsa_priv->swr_ctrl_data) {
 			swrm_wcd_notify(
 				wsa_priv->swr_ctrl_data[0].wsa_swr_pdev,
@@ -1047,6 +1047,7 @@ static int wsa_macro_event_handler(struct snd_soc_component *component,
 		wsa_macro_core_vote(wsa_priv, false);
 		break;
 	case BOLERO_MACRO_EVT_SSR_UP:
+		trace_printk("%s, enter SSR up\n", __func__);
 		/* reset swr after ssr/pdr */
 		wsa_priv->reset_swr = true;
 		if (wsa_priv->swr_ctrl_data)
@@ -2929,6 +2930,9 @@ static int wsa_swrm_clock(void *handle, bool enable)
 
 	mutex_lock(&wsa_priv->swr_clk_lock);
 
+	trace_printk("%s: %s swrm clock %s\n",
+		dev_name(wsa_priv->dev), __func__,
+		(enable ? "enable" : "disable"));
 	dev_dbg(wsa_priv->dev, "%s: swrm clock %s\n",
 		__func__, (enable ? "enable" : "disable"));
 	if (enable) {
@@ -2994,6 +2998,9 @@ static int wsa_swrm_clock(void *handle, bool enable)
 			}
 		}
 	}
+	trace_printk("%s: %s swrm clock users: %d\n",
+		dev_name(wsa_priv->dev), __func__,
+		wsa_priv->swr_clk_users);
 	dev_dbg(wsa_priv->dev, "%s: swrm clock users %d\n",
 		__func__, wsa_priv->swr_clk_users);
 exit:
@@ -3139,23 +3146,6 @@ static void wsa_macro_add_child_devices(struct work_struct *work)
 					__func__, ctrl_num);
 				goto fail_pdev_add;
 			}
-
-			temp = krealloc(swr_ctrl_data,
-					(ctrl_num + 1) * sizeof(
-					struct wsa_macro_swr_ctrl_data),
-					GFP_KERNEL);
-			if (!temp) {
-				dev_err(&pdev->dev, "out of memory\n");
-				ret = -ENOMEM;
-				goto fail_pdev_add;
-			}
-			swr_ctrl_data = temp;
-			swr_ctrl_data[ctrl_num].wsa_swr_pdev = pdev;
-			ctrl_num++;
-			dev_dbg(&pdev->dev,
-				"%s: Adding soundwire ctrl device(s)\n",
-				__func__);
-			wsa_priv->swr_ctrl_data = swr_ctrl_data;
 		}
 
 		ret = platform_device_add(pdev);
@@ -3166,6 +3156,24 @@ static void wsa_macro_add_child_devices(struct work_struct *work)
 			goto fail_pdev_add;
 		}
 
+		if (!strcmp(node->name, "wsa_swr_master")) {
+			temp = krealloc(swr_ctrl_data,
+					(ctrl_num + 1) * sizeof(
+					struct wsa_macro_swr_ctrl_data),
+					GFP_KERNEL);
+			if (!temp) {
+				dev_err(&pdev->dev, "out of memory\n");
+				ret = -ENOMEM;
+				goto err;
+			}
+			swr_ctrl_data = temp;
+			swr_ctrl_data[ctrl_num].wsa_swr_pdev = pdev;
+			ctrl_num++;
+			dev_dbg(&pdev->dev,
+				"%s: Added soundwire ctrl device(s)\n",
+				__func__);
+			wsa_priv->swr_ctrl_data = swr_ctrl_data;
+		}
 		if (wsa_priv->child_count < WSA_MACRO_CHILD_DEVICES_MAX)
 			wsa_priv->pdev_child_devices[
 					wsa_priv->child_count++] = pdev;

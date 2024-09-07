@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/io.h>
@@ -140,7 +140,7 @@ int cam_ipe_disable_soc_resources(struct cam_hw_soc_info *soc_info,
 }
 
 int cam_ipe_update_clk_rate(struct cam_hw_soc_info *soc_info,
-	uint32_t *clk_rate)
+	uint32_t clk_rate)
 {
 	int32_t src_clk_idx;
 
@@ -151,14 +151,14 @@ int cam_ipe_update_clk_rate(struct cam_hw_soc_info *soc_info,
 
 	if ((soc_info->clk_level_valid[CAM_TURBO_VOTE] == true) &&
 		(soc_info->clk_rate[CAM_TURBO_VOTE][src_clk_idx] != 0) &&
-		(*clk_rate > soc_info->clk_rate[CAM_TURBO_VOTE][src_clk_idx])) {
+		(clk_rate > soc_info->clk_rate[CAM_TURBO_VOTE][src_clk_idx])) {
 		CAM_DBG(CAM_PERF, "clk_rate %d greater than max, reset to %d",
-			*clk_rate,
+			clk_rate,
 			soc_info->clk_rate[CAM_TURBO_VOTE][src_clk_idx]);
-		*clk_rate = soc_info->clk_rate[CAM_TURBO_VOTE][src_clk_idx];
+		clk_rate = soc_info->clk_rate[CAM_TURBO_VOTE][src_clk_idx];
 	}
 
-	return cam_soc_util_set_src_clk_rate(soc_info, *clk_rate);
+	return cam_soc_util_set_src_clk_rate(soc_info, clk_rate);
 }
 
 int cam_ipe_toggle_clk(struct cam_hw_soc_info *soc_info, bool clk_enable)

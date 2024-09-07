@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -282,19 +282,6 @@ irqreturn_t cam_top_tpg_irq(int irq_num, void *data)
 	return IRQ_HANDLED;
 }
 
-static int cam_top_tpg_set_top_tpg_pattern(struct cam_top_tpg_hw *tpg_hw,
-	void *cmd_args)
-{
-	uint32_t *top_tpg_pattern;
-
-	top_tpg_pattern = (uint32_t  *) cmd_args;
-	tpg_hw->tpg_pattern = *top_tpg_pattern;
-	CAM_DBG(CAM_ISP, "TPG:%d set tpg debug value:%d",
-		tpg_hw->hw_intf->hw_idx, tpg_hw->tpg_pattern);
-
-	return 0;
-}
-
 static int cam_top_tpg_process_cmd(void *hw_priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
 {
@@ -313,9 +300,6 @@ static int cam_top_tpg_process_cmd(void *hw_priv,
 	switch (cmd_type) {
 	case CAM_ISP_HW_CMD_TPG_PHY_CLOCK_UPDATE:
 		rc = cam_top_tpg_set_phy_clock(tpg_hw, cmd_args);
-		break;
-	case CAM_ISP_HW_CMD_TPG_SET_PATTERN:
-		rc = cam_top_tpg_set_top_tpg_pattern(tpg_hw, cmd_args);
 		break;
 	default:
 		CAM_ERR(CAM_ISP, "TPG:%d unsupported cmd:%d",

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -199,7 +199,7 @@ int cam_tfe_soc_enable_clk(struct cam_hw_soc_info *soc_info,
 
 	if (strcmp(clk_name, CAM_TFE_DSP_CLK_NAME) == 0) {
 		rc = cam_soc_util_clk_enable(soc_private->dsp_clk,
-			CAM_TFE_DSP_CLK_NAME, soc_private->dsp_clk_rate, NULL);
+			CAM_TFE_DSP_CLK_NAME, soc_private->dsp_clk_rate);
 		if (rc)
 			CAM_ERR(CAM_ISP,
 			"Error enable dsp clk failed rc=%d", rc);

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_JPEG_HW_MGR_H
@@ -124,9 +124,6 @@ struct cam_jpeg_hw_ctx_data {
  * @process_irq_cb_work_data: Work data pool for irq requests
  * @cdm_iommu_hdl: Iommu handle received from cdm
  * @cdm_iommu_hdl_secure: Secure iommu handle received from cdm
- * @dentry: Debugfs entry
- * @camnoc_misr_test : debugfs entry to select camnoc_misr for read or write path
- * @bug_on_misr : enable/disable bug on when misr mismatch is seen
  * @devices: Core hw Devices of JPEG hardware manager
  * @cdm_info: Cdm info for each core device.
  * @cdm_reg_map: Regmap of each device for cdm.
@@ -135,7 +132,6 @@ struct cam_jpeg_hw_ctx_data {
  * @hw_config_req_list: Pending hw update requests list
  * @free_req_list: Free nodes for above list
  * @req_list: Nodes of hw update list
- * @num_pid: num of pids supported in the device
  */
 struct cam_jpeg_hw_mgr {
 	struct mutex hw_mgr_mutex;
@@ -150,9 +146,6 @@ struct cam_jpeg_hw_mgr {
 	struct cam_jpeg_process_irq_work_data_t *process_irq_cb_work_data;
 	int cdm_iommu_hdl;
 	int cdm_iommu_hdl_secure;
-	struct dentry *dentry;
-	u64 camnoc_misr_test;
-	u64 bug_on_misr;
 
 	struct cam_hw_intf **devices[CAM_JPEG_DEV_TYPE_MAX];
 	struct cam_jpeg_hw_cdm_info_t cdm_info[CAM_JPEG_DEV_TYPE_MAX]
@@ -167,7 +160,6 @@ struct cam_jpeg_hw_mgr {
 	struct list_head hw_config_req_list;
 	struct list_head free_req_list;
 	struct cam_jpeg_hw_cfg_req req_list[CAM_JPEG_HW_CFG_Q_MAX];
-	uint32_t num_pid[CAM_JPEG_DEV_TYPE_MAX];
 };
 
 #endif /* CAM_JPEG_HW_MGR_H */

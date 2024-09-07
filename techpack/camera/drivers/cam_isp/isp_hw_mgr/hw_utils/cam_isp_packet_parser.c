@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <media/cam_defs.h>
@@ -119,38 +118,29 @@ static int cam_isp_update_dual_config(
 		(cmd_desc->offset >=
 		(len - sizeof(struct cam_isp_dual_config)))) {
 		CAM_ERR(CAM_ISP, "not enough buffer provided");
-		cam_mem_put_cpu_buf(cmd_desc->mem_handle);
 		return -EINVAL;
 	}
 	remain_len = len - cmd_desc->offset;
 	cpu_addr += (cmd_desc->offset / 4);
 	dual_config = (struct cam_isp_dual_config *)cpu_addr;
 
-	if (dual_config->num_ports > size_isp_out) {
-		CAM_ERR(CAM_ISP, "num_ports %d more than max_vfe_out_res %d",
-			dual_config->num_ports, size_isp_out);
-		cam_mem_put_cpu_buf(cmd_desc->mem_handle);
-		return -EINVAL;
-	}
-
 	if ((dual_config->num_ports *
 		sizeof(struct cam_isp_dual_stripe_config)) >
 		(remain_len - offsetof(struct cam_isp_dual_config, stripes))) {
 		CAM_ERR(CAM_ISP, "not enough buffer for all the dual configs");
-		cam_mem_put_cpu_buf(cmd_desc->mem_handle);
 		return -EINVAL;
 	}
 	for (i = 0; i < dual_config->num_ports; i++) {
 
-		hw_mgr_res = &res_list_isp_out[i];
-		if (!hw_mgr_res) {
+		if (i >= CAM_ISP_IFE_OUT_RES_BASE + size_isp_out) {
 			CAM_ERR(CAM_ISP,
-				"Invalid isp out resource i %d num_out_res %d",
-				i, dual_config->num_ports);
+				"failed update for i:%d > size_isp_out:%d",
+				i, size_isp_out);
 			rc = -EINVAL;
 			goto end;
 		}
 
+		hw_mgr_res = &res_list_isp_out[i];
 		for (j = 0; j < CAM_ISP_HW_SPLIT_MAX; j++) {
 			if (!hw_mgr_res->hw_res[j])
 				continue;
@@ -188,7 +178,6 @@ static int cam_isp_update_dual_config(
 	}
 
 end:
-	cam_mem_put_cpu_buf(cmd_desc->mem_handle);
 	return rc;
 }
 
@@ -284,10 +273,6 @@ int cam_isp_add_command_buffers(
 		split_id, prepare->packet->num_cmd_buf);
 
 	for (i = 0; i < prepare->packet->num_cmd_buf; i++) {
-		rc = cam_packet_util_validate_cmd_desc(&cmd_desc[i]);
-		if (rc)
-			return rc;
-
 		num_ent = prepare->num_hw_update_entries;
 		if (!cmd_desc[i].length)
 			continue;
@@ -715,7 +700,6 @@ int cam_isp_add_io_buffers(
 			wm_update.num_buf   = plane_id;
 			wm_update.io_cfg    = &io_cfg[i];
 			wm_update.frame_header = 0;
-			wm_update.fh_enabled = false;
 
 			for (plane_id = 0; plane_id < CAM_PACKET_MAX_PLANES;
 				plane_id++)
@@ -725,8 +709,14 @@ int cam_isp_add_io_buffers(
 			if ((frame_header_info->frame_header_enable) &&
 				!(frame_header_info->frame_header_res_id)) {
 				wm_update.frame_header = iova_addr;
+				frame_header_info->frame_header_res_id =
+					res->res_id;
 				wm_update.local_id =
 					prepare->packet->header.request_id;
+				CAM_DBG(CAM_ISP,
+					"Frame header enabled for res: 0x%x iova: %pK",
+					frame_header_info->frame_header_res_id,
+					wm_update.frame_header);
 			}
 
 			update_buf.cmd.size = kmd_buf_remain_size;
@@ -746,16 +736,6 @@ int cam_isp_add_io_buffers(
 				rc = -ENOMEM;
 				return rc;
 			}
-
-			if (wm_update.fh_enabled) {
-				frame_header_info->frame_header_res_id =
-					res->res_id;
-				CAM_DBG(CAM_ISP,
-					"Frame header enabled for res: 0x%x iova: %pK",
-					frame_header_info->frame_header_res_id,
-					wm_update.frame_header);
-			}
-
 			io_cfg_used_bytes += update_buf.cmd.used_bytes;
 
 			if (!out_map_entries) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -492,12 +492,6 @@ static int msm_vidc_probe_vidc_device(struct platform_device *pdev)
 
 	core->id = MSM_VIDC_CORE_VENUS;
 
-	vidc_driver->ctxt = kcalloc(core->platform_data->max_inst_count,
-		sizeof(*vidc_driver->ctxt), GFP_KERNEL);
-	if (!vidc_driver->ctxt)
-		goto err_vidc_context;
-	vidc_driver->num_ctxt = core->platform_data->max_inst_count;
-
 	rc = v4l2_device_register(&pdev->dev, &core->v4l2_dev);
 	if (rc) {
 		d_vpr_e("Failed to register v4l2 device\n");
@@ -594,8 +588,6 @@ err_enc:
 err_dec:
 	v4l2_device_unregister(&core->v4l2_dev);
 err_v4l2_register:
-	kfree(vidc_driver->ctxt);
-err_vidc_context:
 	sysfs_remove_group(&pdev->dev.kobj, &msm_vidc_core_attr_group);
 err_core_init:
 	dev_set_drvdata(&pdev->dev, NULL);
@@ -668,7 +660,6 @@ static int msm_vidc_remove(struct platform_device *pdev)
 	mutex_destroy(&core->resources.cb_lock);
 	mutex_destroy(&core->lock);
 	kfree(core);
-	kfree(vidc_driver->ctxt);
 	return rc;
 }
 
@@ -677,7 +668,6 @@ static int msm_vidc_pm_suspend(struct device *dev)
 	int rc = 0;
 	struct msm_vidc_core *core;
 
-	d_vpr_h("%s\n", __func__);
 	/*
 	 * Bail out if
 	 * - driver possibly not probed yet
@@ -699,33 +689,14 @@ static int msm_vidc_pm_suspend(struct device *dev)
 		rc = 0;
 	else if (rc)
 		d_vpr_e("Failed to suspend: %d\n", rc);
-	else
-		core->pm_suspended  = true;
+
 
 	return rc;
 }
 
 static int msm_vidc_pm_resume(struct device *dev)
 {
-	struct msm_vidc_core *core;
-
 	d_vpr_h("%s\n", __func__);
-	/*
-	 * Bail out if
-	 * - driver possibly not probed yet
-	 * - not the main device. We don't support power management on
-	 *   subdevices (e.g. context banks)
-	 */
-	if (!dev || !dev->driver ||
-		!of_device_is_compatible(dev->of_node, "qcom,msm-vidc"))
-		return 0;
-
-	core = dev_get_drvdata(dev);
-	if (!core) {
-		d_vpr_e("%s: invalid core\n", __func__);
-		return -EINVAL;
-	}
-	core->pm_suspended  = false;
 	return 0;
 }
 
@@ -745,12 +716,9 @@ static struct platform_driver msm_vidc_driver = {
 	},
 };
 
-extern void __init init_vidc_kmem_buf_pool(void);
 static int __init msm_vidc_init(void)
 {
 	int rc = 0;
-
-	init_vidc_kmem_buf_pool();
 
 	vidc_driver = kzalloc(sizeof(*vidc_driver),
 						GFP_KERNEL);

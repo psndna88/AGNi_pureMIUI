@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -15,7 +14,6 @@
 #include <linux/input.h>
 #include <linux/of_device.h>
 #include <linux/soc/qcom/fsa4480-i2c.h>
-#include <linux/hwid.h>
 #include <sound/core.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
@@ -108,11 +106,8 @@ enum {
 	TDM_7,
 	TDM_PORT_MAX,
 };
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-#define TDM_MAX_SLOTS 4
-#else
+
 #define TDM_MAX_SLOTS 8
-#endif
 #define TDM_SLOT_WIDTH_BITS 32
 #define TDM_SLOT_WIDTH_BYTES TDM_SLOT_WIDTH_BITS/8
 
@@ -496,35 +491,11 @@ static struct dev_config mi2s_tx_cfg[] = {
 	[SEN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 };
 
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
-	{ /* PRI TDM */
-		{ {0,   4, 0xFFFF} }, /* RX_0 */
-		{ {0xFFFF} }, /* RX_1 */
-		{ {0xFFFF} }, /* RX_2 */
-		{ {0xFFFF} }, /* RX_3 */
-		{ {0xFFFF} }, /* RX_4 */
-		{ {0xFFFF} }, /* RX_5 */
-		{ {0xFFFF} }, /* RX_6 */
-		{ {0xFFFF} }, /* RX_7 */
-	},
-	{
-		{ {0,   4, 0xFFFF} }, /* TX_0 */
-		{ {0xFFFF} }, /* TX_1 */
-		{ {0xFFFF} }, /* TX_2 */
-		{ {0xFFFF} }, /* TX_3 */
-		{ {0xFFFF} }, /* TX_4 */
-		{ {0xFFFF} }, /* TX_5 */
-		{ {0xFFFF} }, /* TX_6 */
-		{ {0xFFFF} }, /* TX_7 */
-	},
-};
-#else
 static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* PRI TDM */
 		{ {0,   4, 0xFFFF} }, /* RX_0 */
 		{ {8,  12, 0xFFFF} }, /* RX_1 */
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
+#if defined(CONFIG_TARGET_PRODUCT_MONA)
 		{ {0xFFFF} }, /* RX_2 */
 		{ {0xFFFF} }, /* RX_3 */
 #else
@@ -537,7 +508,7 @@ static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 		{ {0xFFFF} }, /* RX_7 */
 	},
 	{
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
+#if defined(CONFIG_TARGET_PRODUCT_MONA)
 		{ {0,   4, 0xFFFF} }, /* TX_0 */
 		{ {8,  12, 0xFFFF} }, /* TX_1 */
 		{ {0xFFFF} }, /* TX_2 */
@@ -554,7 +525,6 @@ static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 		{ {0xFFFF} }, /* TX_7 */
 	},
 };
-#endif
 
 static struct tdm_dev_config sec_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* SEC TDM */
@@ -579,30 +549,6 @@ static struct tdm_dev_config sec_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	},
 };
 
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-static struct tdm_dev_config tert_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
-	{ /* TERT TDM */
-		{ {0,   4, 0xFFFF} }, /* RX_0 */
-		{ {16, 20, 0xFFFF} }, /* RX_1 */
-		{ {16, 20, 0xFFFF} }, /* RX_2 */
-		{ {24, 28, 0xFFFF} }, /* RX_3 */
-		{ {0xFFFF} }, /* RX_4 */
-		{ {0xFFFF} }, /* RX_5 */
-		{ {0xFFFF} }, /* RX_6 */
-		{ {0xFFFF} }, /* RX_7 */
-	},
-	{
-		{ {0,   4, 0xFFFF} }, /* TX_0 */
-		{ {8,  12, 0xFFFF} }, /* TX_1 */
-		{ {16, 20, 0xFFFF} }, /* TX_2 */
-		{ {24, 28, 0xFFFF} }, /* TX_3 */
-		{ {0xFFFF} }, /* TX_4 */
-		{ {0xFFFF} }, /* TX_5 */
-		{ {0xFFFF} }, /* TX_6 */
-		{ {0xFFFF} }, /* TX_7 */
-	},
-};
-#else
 static struct tdm_dev_config tert_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* TERT TDM */
 		{ {0,   4,   8,   12, 0xFFFF} }, /* RX_0 */
@@ -625,7 +571,6 @@ static struct tdm_dev_config tert_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 		{ {0xFFFF} }, /* TX_7 */
 	},
 };
-#endif
 
 static struct tdm_dev_config quat_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* QUAT TDM */
@@ -4023,12 +3968,9 @@ static const struct snd_kcontrol_new msm_common_snd_controls[] = {
 	SOC_ENUM_EXT("PRI_TDM_RX_0 SampleRate", tdm_rx_sample_rate,
 			tdm_rx_sample_rate_get,
 			tdm_rx_sample_rate_put),
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-#else
 	SOC_ENUM_EXT("PRI_TDM_RX_1 SampleRate", tdm_rx_sample_rate,
 			tdm_rx_sample_rate_get,
 			tdm_rx_sample_rate_put),
-#endif
 	SOC_ENUM_EXT("SEC_TDM_RX_0 SampleRate", tdm_rx_sample_rate,
 			tdm_rx_sample_rate_get,
 			tdm_rx_sample_rate_put),
@@ -4144,12 +4086,9 @@ static const struct snd_kcontrol_new msm_common_snd_controls[] = {
 	SOC_ENUM_EXT("PRI_TDM_RX_0 Format", tdm_rx_format,
 			tdm_rx_format_get,
 			tdm_rx_format_put),
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-#else
 	SOC_ENUM_EXT("PRI_TDM_RX_1 Format", tdm_rx_format,
 			tdm_rx_format_get,
 			tdm_rx_format_put),
-#endif
 	SOC_ENUM_EXT("SEC_TDM_RX_0 Format", tdm_rx_format,
 			tdm_rx_format_get,
 			tdm_rx_format_put),
@@ -4243,12 +4182,9 @@ static const struct snd_kcontrol_new msm_common_snd_controls[] = {
 	SOC_ENUM_EXT("PRI_TDM_RX_0 Channels", tdm_rx_chs,
 			tdm_rx_ch_get,
 			tdm_rx_ch_put),
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-#else
 	SOC_ENUM_EXT("PRI_TDM_RX_1 Channels", tdm_rx_chs,
 			tdm_rx_ch_get,
 			tdm_rx_ch_put),
-#endif
 	SOC_ENUM_EXT("SEC_TDM_RX_0 Channels", tdm_rx_chs,
 			tdm_rx_ch_get,
 			tdm_rx_ch_put),
@@ -4489,8 +4425,6 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 		rate->min = rate->max = tdm_rx_cfg[TDM_PRI][TDM_0].sample_rate;
 		break;
 
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-#else
 	case MSM_BACKEND_DAI_PRI_TDM_RX_1:
 		channels->min = channels->max =
 				tdm_rx_cfg[TDM_PRI][TDM_1].channels;
@@ -4498,7 +4432,6 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 			       tdm_rx_cfg[TDM_PRI][TDM_1].bit_format);
 		rate->min = rate->max = tdm_rx_cfg[TDM_PRI][TDM_1].sample_rate;
 		break;
-#endif
 
 	case MSM_BACKEND_DAI_PRI_TDM_TX_0:
 		channels->min = channels->max =
@@ -4952,7 +4885,7 @@ static int lahaina_tdm_snd_hw_params(struct snd_pcm_substream *substream,
 			__func__, cpu_dai->id);
 		return -EINVAL;
 	}
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN) || defined(CONFIG_TARGET_PRODUCT_REDWOOD)
+#if defined(CONFIG_TARGET_PRODUCT_MONA)
 	if (slots == TDM_MAX_SLOTS) {
 		slots = TDM_MAX_SLOTS / 2;
 		pr_debug("%s: dai id = 0x%x update slots = %d\n", __func__, cpu_dai->id, slots);
@@ -5063,10 +4996,7 @@ static int msm_get_tdm_mode(u32 port_id)
 
 	switch (port_id) {
 	case AFE_PORT_ID_PRIMARY_TDM_RX:
-#if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
-#else
 	case AFE_PORT_ID_PRIMARY_TDM_RX_1:
-#endif
 	case AFE_PORT_ID_PRIMARY_TDM_TX:
 		tdm_mode = TDM_PRI;
 		break;
@@ -5254,7 +5184,7 @@ static int msm_snd_cdc_dma_startup(struct snd_pcm_substream *substream)
 static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 				u32 num_ch, u32 ch_mask)
 {
-	int i = 0, j = 0;
+	int i = 0;
 	int val = 0;
 	u8 dev_num = 0;
 	int ch_configured = 0;
@@ -5263,7 +5193,6 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_dai_link *dai_link = rtd->dai_link;
         struct msm_asoc_mach_data *pdata =
 			snd_soc_card_get_drvdata(rtd->card);
-	struct lpass_swr_spkr_dep_cfg_t *spkr_dep_cfg_ptr;
 
 	if (!pdata) {
 		pr_err("%s: pdata is NULL\n", __func__);
@@ -5322,11 +5251,9 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 			return;
 		}
 
-		spkr_dep_cfg_ptr = &(pdata->cps_config.spkr_dep_cfg[i]);
-
 		/* Clear stale dev num info */
-		spkr_dep_cfg_ptr->vbatt_pkd_reg_addr &= 0xFFFF;
-		spkr_dep_cfg_ptr->temp_pkd_reg_addr &= 0xFFFF;
+		pdata->cps_config.spkr_dep_cfg[i].vbatt_pkd_reg_addr &= 0xFFFF;
+		pdata->cps_config.spkr_dep_cfg[i].temp_pkd_reg_addr &= 0xFFFF;
 
 		val = 0;
 
@@ -5340,22 +5267,11 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 		val |= (i*2) << 16;
 
 		/* Update dev num in packed reg addr */
-		spkr_dep_cfg_ptr->vbatt_pkd_reg_addr |= val;
+		pdata->cps_config.spkr_dep_cfg[i].vbatt_pkd_reg_addr |= val;
 
 		val &= 0xFF0FFFF;
 		val |= ((i*2)+1) << 16;
-		spkr_dep_cfg_ptr->temp_pkd_reg_addr |= val;
-
-		/* Retain dev_num from val */
-		val &= 0x00F00000;
-		for (j = 0; j < MAX_CPS_LEVELS; j++)
-		{
-			val &= 0xFFF0FFFF;
-			val |= ((i * 3) + j) << 16;
-			spkr_dep_cfg_ptr->value_normal_thrsd[j] |= val;
-			spkr_dep_cfg_ptr->value_low1_thrsd[j] |= val;
-			spkr_dep_cfg_ptr->value_low2_thrsd[j] |= val;
-		}
+		pdata->cps_config.spkr_dep_cfg[i].temp_pkd_reg_addr |= val;
 		i++;
 		ch_configured++;
 	}
@@ -5578,14 +5494,17 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			mi2s_intf_conf[index].audio_core_vote = true;
 		}
 
+		/* Check if msm needs to provide the clock to the interface */
+		if (!mi2s_intf_conf[index].msm_is_mi2s_master) {
+			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
+			fmt = SND_SOC_DAIFMT_CBM_CFM;
+		}
+
 		mi2s_clk[index].clk_freq_in_hz = (sample_rate *
 					MI2S_NUM_CHANNELS * bit_per_sample);
 		dev_dbg(rtd->card->dev, "%s: clock rate %ul\n", __func__,
 			mi2s_clk[index].clk_freq_in_hz);
 
-		/* Check if msm needs to provide the clock to the interface */
-		if (!mi2s_intf_conf[index].msm_is_mi2s_master)
-			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
@@ -5594,6 +5513,12 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			goto clean_up;
 		}
 
+		ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
+		if (ret < 0) {
+			pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
+				__func__, index, ret);
+			goto clk_off;
+		}
 		if (pdata->mi2s_gpio_p[index]) {
 			if (atomic_read(&(pdata->mi2s_gpio_ref_count[index]))
 									== 0) {
@@ -5608,15 +5533,6 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			atomic_inc(&(pdata->mi2s_gpio_ref_count[index]));
 		}
 	}
-	if (!mi2s_intf_conf[index].msm_is_mi2s_master)
-		fmt = SND_SOC_DAIFMT_CBM_CFM;
-	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
-	if (ret < 0) {
-		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
-			__func__, index, ret);
-		goto clk_off;
-	}
-
 clk_off:
 	if (ret < 0)
 		msm_mi2s_set_sclk(substream, false);
@@ -6369,7 +6285,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tx3_cdcdma_hostless),
 	},
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN) || defined(CONFIG_TARGET_PRODUCT_REDWOOD)
+#if defined(CONFIG_TARGET_PRODUCT_MONA)
 	{/* hw:x,32 */
 		.name = "PRI_TDM_TX_0_HOSTLESS",
 		.stream_name = "PRI_TDM_TX_0_HOSTLESS Capture",
@@ -6395,20 +6311,6 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(tert_mi2s_tx_hostless),
 	},
-#endif
-#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
-{/* hw:x,32 */
-  		.name = "Primary MI2S TX_Hostless",
-  		.stream_name = "Primary MI2S_TX Hostless Capture",
-  		.dynamic = 1,
-  		.dpcm_capture = 1,
-  		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-  				SND_SOC_DPCM_TRIGGER_POST},
-  		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-  		.ignore_suspend = 1,
-  		.ignore_pmdown_time = 1,
-  		SND_SOC_DAILINK_REG(pri_mi2s_tx_hostless),
-  	},
 #endif
 };
 
@@ -6748,7 +6650,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_rx_0),
 	},
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN) || defined(CONFIG_TARGET_PRODUCT_REDWOOD)
+#if defined(CONFIG_TARGET_PRODUCT_MONA)
 	{
 		.name = LPASS_BE_PRI_TDM_RX_1,
 		.stream_name = "Primary TDM1 Playback",
@@ -6808,7 +6710,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_rx_0),
 	},
-#if defined(CONFIG_SND_SOC_TFA9874) || defined(CONFIG_SND_SOC_AW88263S_TDM) || defined(CONFIG_SND_SOC_AW88263S_M20_TDM) 
+#if defined(CONFIG_SND_SOC_TFA9874) || defined(CONFIG_SND_SOC_AW88263S_TDM)
 #else
 	{
 		.name = LPASS_BE_TERT_TDM_RX_1,
@@ -7961,6 +7863,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 					sizeof(msm_mi2s_be_dai_links));
 				total_links +=
 					ARRAY_SIZE(msm_mi2s_be_dai_links);
+				dev_info(dev, "%s: Using msm_mi2s_be_dai_links\n", __func__);
 			}
 		}
 #ifndef CONFIG_AUXPCM_DISABLE
@@ -8193,8 +8096,6 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	bolero_register_wake_irq(component, false);
 
 	if (pdata->wcd_disabled) {
-		bolero_set_port_map(bolero_component,
-			ARRAY_SIZE(sm_port_map), sm_port_map);
 		codec_reg_done = true;
 		return 0;
 	}
@@ -8274,6 +8175,7 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	codec_reg_done = true;
 	return 0;
 }
+
 
 static void msm_i2s_auxpcm_init(struct platform_device *pdev)
 {
@@ -8655,16 +8557,8 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		wcd_mbhc_cfg.swap_gnd_mic = msm_swap_gnd_mic;
 	}
 
-#ifdef CONFIG_TARGET_PRODUCT_TAOYAO
-	if (wcd_mbhc_cfg.enable_usbc_analog)
-	{
-		pr_err("%s: Set swap_gnd_mic = msm_usbc_swap_gnd_mic \n");
-		wcd_mbhc_cfg.swap_gnd_mic = msm_usbc_swap_gnd_mic;
-	}
-#else
 	if (wcd_mbhc_cfg.enable_usbc_analog)
 		wcd_mbhc_cfg.swap_gnd_mic = msm_usbc_swap_gnd_mic;
-#endif
 
 	pdata->fsa_handle = of_parse_phandle(pdev->dev.of_node,
 					"fsa4480-i2c-handle", 0);

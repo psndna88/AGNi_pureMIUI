@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_ISP_HW_MGR_INTF_H_
@@ -29,12 +29,6 @@
 /* Appliacble vote paths for dual ife, based on no. of UAPI definitions */
 #define CAM_ISP_MAX_PER_PATH_VOTES 40
 
-/*
- * Maximum configuration entry size  - This is based on the
- * worst case DUAL IFE use case plus some margin.
- */
-#define CAM_ISP_CTX_CFG_MAX                     25
-
 /**
  *  enum cam_isp_hw_event_type - Collection of the ISP hardware events
  */
@@ -48,18 +42,19 @@ enum cam_isp_hw_event_type {
 	CAM_ISP_HW_EVENT_MAX
 };
 
+
 /**
  * enum cam_isp_hw_err_type - Collection of the ISP error types for
  *                         ISP hardware event CAM_ISP_HW_EVENT_ERROR
  */
 enum cam_isp_hw_err_type {
-	CAM_ISP_HW_ERROR_NONE = 0x0001,
-	CAM_ISP_HW_ERROR_OVERFLOW = 0x0002,
-	CAM_ISP_HW_ERROR_P2I_ERROR = 0x0004,
-	CAM_ISP_HW_ERROR_VIOLATION = 0x0008,
-	CAM_ISP_HW_ERROR_BUSIF_OVERFLOW = 0x0010,
-	CAM_ISP_HW_ERROR_CSID_FATAL = 0x0020,
-	CAM_ISP_HW_ERROR_CSID_OVERFLOW = 0x0040,
+	CAM_ISP_HW_ERROR_NONE,
+	CAM_ISP_HW_ERROR_OVERFLOW,
+	CAM_ISP_HW_ERROR_P2I_ERROR,
+	CAM_ISP_HW_ERROR_VIOLATION,
+	CAM_ISP_HW_ERROR_BUSIF_OVERFLOW,
+	CAM_ISP_HW_ERROR_CSID_FATAL,
+	CAM_ISP_HW_ERROR_MAX,
 };
 
 /**
@@ -194,7 +189,7 @@ struct cam_isp_hw_epoch_event_data {
  * @resource_handle:       Resource handle array
  * @last_consumed_addr:    Last consumed addr
  * @timestamp:             Timestamp for the buf done event
- * @evt_param:             Specific info about the frame
+ *
  */
 struct cam_isp_hw_done_event_data {
 	uint32_t             num_handles;
@@ -202,8 +197,7 @@ struct cam_isp_hw_done_event_data {
 				CAM_NUM_OUT_PER_COMP_IRQ_MAX];
 	uint32_t             last_consumed_addr[
 				CAM_NUM_OUT_PER_COMP_IRQ_MAX];
-	uint64_t             timestamp;
-	uint32_t             evt_param;
+	uint64_t       timestamp;
 };
 
 /**
@@ -241,7 +235,6 @@ enum cam_isp_hw_mgr_command {
 	CAM_ISP_HW_MGR_CMD_CTX_TYPE,
 	CAM_ISP_HW_MGR_GET_PACKET_OPCODE,
 	CAM_ISP_HW_MGR_GET_LAST_CDM_DONE,
-	CAM_ISP_HW_MGR_CMD_UPDATE_CLOCK,
 	CAM_ISP_HW_MGR_CMD_MAX,
 };
 

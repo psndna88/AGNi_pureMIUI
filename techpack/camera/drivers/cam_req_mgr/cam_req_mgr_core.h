@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef _CAM_REQ_MGR_CORE_H_
 #define _CAM_REQ_MGR_CORE_H_
@@ -19,7 +18,6 @@
 #define CAM_REQ_MGR_WATCHDOG_TIMEOUT_MAX      50000
 #define CAM_REQ_MGR_SCHED_REQ_TIMEOUT         1000
 #define CAM_REQ_MGR_SIMULATE_SCHED_REQ        30
-#define CAM_REQ_MGR_DEFAULT_HDL_VAL           0
 
 #define FORCE_DISABLE_RECOVERY  2
 #define FORCE_ENABLE_RECOVERY   1
@@ -417,8 +415,7 @@ struct cam_req_mgr_core_link {
 	uint64_t                             sof_timestamp;
 	uint64_t                             prev_sof_timestamp;
 	bool                                 dual_trigger;
-	uint32_t trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS]
-				[CAM_TRIGGER_MAX_POINTS + 1];
+	uint32_t trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS][CAM_TRIGGER_MAX_POINTS];
 	atomic_t                             eof_event_cnt;
 	bool                                 skip_init_frame;
 	uint64_t                             last_sof_trigger_jiffies;

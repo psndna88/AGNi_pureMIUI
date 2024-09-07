@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 
@@ -29,11 +28,6 @@ struct param_outband {
 /* Common structures and definitions used for instance ID support */
 /* Instance ID definitions */
 #define INSTANCE_ID_0 0x0000
-
-struct adm_register_event {
-	struct apr_hdr hdr;
-	__u8 payload[0];
-} __packed;
 
 struct mem_mapping_hdr {
 	/*
@@ -140,10 +134,6 @@ struct module_instance_info {
 
 #define ADM_CMD_MATRIX_MAP_ROUTINGS_V5 0x00010325
 #define ADM_CMD_STREAM_DEVICE_MAP_ROUTINGS_V5 0x0001033D
-
-#define ADM_CMD_REGISTER_EVENT  0x00010365
-#define ADM_PP_EVENT            0x00010366
-
 /* Enumeration for an audio Rx matrix ID.*/
 #define ADM_MATRIX_ID_AUDIO_RX              0
 
@@ -231,8 +221,6 @@ struct adm_cmd_matrix_map_routings_v5 {
 
 /* Definition for a low latency stream session. */
 #define ADM_LOW_LATENCY_DEVICE_SESSION			0x2000
-
-#define ADM_LOW_LATENCY_NPROC_DEVICE_SESSION		0x6000
 
 /* Definition for a ultra low latency stream session. */
 #define ADM_ULTRA_LOW_LATENCY_DEVICE_SESSION		0x4000
@@ -333,11 +321,9 @@ struct adm_cmd_device_open_v5 {
  */
 
 	u16                  endpoint_id_2;
-/* Endpoint 2 is set with 0xFFFF by default.
- * In cases of ECREF, Endpoint 2 can be set with the ecref AFE port id,
- * which will be connected to the TX block.
- * ECREF data is given as input to the TX block.
- * Endpoint 2 is applicable to audio CoPreP.
+/* Logical and physical endpoint ID 2 for a voice processor
+ * Tx block.
+ * This is not applicable to audio COPP.
  * Supported values:
  * - AFE Rx port
  * - 0xFFFF -- Endpoint 2 is unavailable and the voice
@@ -425,11 +411,9 @@ struct adm_cmd_device_open_v6 {
  */
 
 	u16                  endpoint_id_2;
-/* Endpoint 2 is set with 0xFFFF by default.
- * In cases of ECREF, Endpoint 2 can be set with the ecref AFE port id,
- * which will be connected to the TX block.
- * ECREF data is given as input to the TX block.
- * Endpoint 2 is applicable to audio CoPreP.
+/* Logical and physical endpoint ID 2 for a voice processor
+ * Tx block.
+ * This is not applicable to audio COPP.
  * Supported values:
  * - AFE Rx port
  * - 0xFFFF -- Endpoint 2 is unavailable and the voice
@@ -593,11 +577,9 @@ struct adm_cmd_device_open_v8 {
  */
 
 	u16                  endpoint_id_2;
-/* Endpoint 2 is set with 0xFFFF by default.
- * In cases of ECREF, Endpoint 2 can be set with the ecref AFE port id,
- * which will be connected to the TX block.
- * ECREF data is given as input to the TX block.
- * Endpoint 2 is applicable to audio CoPreP.
+/* Logical and physical endpoint ID 2 for a voice processor
+ * Tx block.
+ * This is not applicable to audio COPP.
  * Supported values:
  * - AFE Rx port
  * - 0xFFFF -- Endpoint 2 is unavailable and the voice
@@ -681,26 +663,6 @@ struct dsp_stream_callback_list {
 };
 
 struct dsp_stream_callback_prtd {
-	uint16_t event_count;
-	struct list_head event_queue;
-	spinlock_t prtd_spin_lock;
-};
-
-#define DSP_ADM_CALLBACK "ADSP COPP Callback Event"
-#define DSP_ADM_CALLBACK_QUEUE_SIZE 1024
-
-struct dsp_adm_callback_list {
-	struct list_head list;
-	struct msm_adsp_event_data event;
-};
-
-struct adm_usr_info {
-	u32 service_id;
-	u32 reserved;
-	u32 token_coppidx;
-};
-
-struct dsp_adm_callback_prtd {
 	uint16_t event_count;
 	struct list_head event_queue;
 	spinlock_t prtd_spin_lock;
@@ -881,10 +843,6 @@ struct audproc_softvolume_params {
  */
 #define AUDPROC_PARAM_ID_MFC_OUTPUT_MEDIA_FORMAT            0x00010913
 
-/* ID of the Output Media Format V2 parameters used by AUDPROC_MODULE_ID_MFC.
- */
-#define AUDPROC_PARAM_ID_MFC_OUTPUT_MEDIA_FORMAT_V2         0x00010942
-
 /* Param ID of Channel Mixer used by AUDPROC_MODULE_ID_MFC */
 #define AUDPROC_CHMIXER_PARAM_ID_COEFF                      0x00010342
 
@@ -918,33 +876,6 @@ struct adm_cmd_set_pp_params_v5 {
 	 * in shared memory. This is used for parsing the parameter
 	 * payload.
 	 */
-} __packed;
-
-/* Payload of the AUDPROC_PARAM_ID_MFC_OUTPUT_MEDIA_FORMAT_V2 parameter in the
- Media Format Converter Module. Following this will be the variable payload for channel_map.
- */
-struct audproc_mfc_output_media_fmt_v2_t
-{
-	uint32_t sampling_rate;
-	/**< @h2xmle_description  {Sampling rate in samples per second.}
-	@h2xmle_range        {0..384000}  */
-
-	uint16_t bits_per_sample;
-	/**< @h2xmle_description  {Number of bits used to store each sample.}
-	@h2xmle_rangeList   {"16 bits per sample (Q15 format)"= 16;"24 bits per sample (Q27 format)"=24;"32 bits per sample (Q31 format)"=32
-	@h2xmle_default      {16}
-	*/
-
-	uint16_t num_channels;
-	/**< @h2xmle_description  {Number of channels.}
-	@h2xmle_default      {1}
-	@h2xmle_range        {1..32}  */
-
-	uint16_t channel_type[0];
-	/**< @h2xmle_description  {Channel mapping array. Specify a channel mapping for each output channel.If the number of channels is not a multiple of four, zero padding must be added to the channel type array to align the packet to a multiple of 32 bits.}
-	@h2xmle_variableArraySize {num_channels}
-	@h2xmle_range        {1..63}
-	@h2xmle_default      {1}*/
 } __packed;
 
 /* Maximum number of channels supported by MFC media fmt params */
@@ -4205,7 +4136,7 @@ struct afe_param_id_cdc_dma_data_align {
 	uint32_t	cdc_dma_data_align;
 } __packed;
 
-#define MAX_ABR_LEVELS 6
+#define MAX_ABR_LEVELS 5
 
 struct afe_bit_rate_level_map_t {
 	/*
@@ -4920,11 +4851,6 @@ struct asm_lhdc_specific_enc_cfg_t {
 	 * @Default: 679 for LHDCBT_MTU_2DH5
 	 */
 	uint16_t                     mtu;
-	uint32_t                     ar_enabled;
-	uint32_t                     meta_enabled;
-	uint32_t                     llac_enabled;
-	uint32_t                     mbr_enabled;
-	uint32_t                     larc_enabled;
 } __packed;
 
 struct asm_lhdc_enc_cfg_t {
@@ -5849,7 +5775,6 @@ struct afe_param_id_lpass_core_shared_clk_cfg {
 
 #define NULL_POPP_TOPOLOGY				0x00010C68
 #define NULL_COPP_TOPOLOGY				0x00010312
-#define AUDIO_COPP_MFC					0x10000098
 #define DEFAULT_COPP_TOPOLOGY				0x00010314
 #define DEFAULT_POPP_TOPOLOGY				0x00010BE4
 #define COMPRESSED_PASSTHROUGH_DEFAULT_TOPOLOGY         0x0001076B
@@ -8236,8 +8161,6 @@ struct asm_session_cmdrsp_get_path_delay_v2 {
 
 #define ASM_ULTRA_LOW_LATENCY_STREAM_SESSION			0x20000000
 
-#define ASM_ULTRA_LOW_LATENCY_NPROC_STREAM_SESSION		0x30000000
-
 #define ASM_ULL_POST_PROCESSING_STREAM_SESSION			0x40000000
 
 #define ASM_LEGACY_STREAM_SESSION                                      0
@@ -8414,9 +8337,6 @@ struct asm_stream_cmd_open_shared_io {
 
 /* Bit value for Low Latency Tx stream subfield */
 #define ASM_LOW_LATENCY_TX_STREAM_SESSION			1
-
-/* Bit value for Low Latency No Post Processing Tx stream subfield */
-#define ASM_LOW_LATENCY_NPROC_TX_STREAM_SESSION			3
 
 /* Bit shift for the stream_perf_mode subfield. */
 #define ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ              29
@@ -12351,9 +12271,6 @@ struct afe_param_id_clip_bank_sel {
 /* Supported LPASS CLK root*/
 #define Q6AFE_LPASS_CLK_ROOT_DEFAULT 0
 
-#define Q6AFE_LPASS_MCLK_IN0 1
-#define Q6AFE_LPASS_MCLK_IN1 2
-
 enum afe_lpass_clk_mode {
 	Q6AFE_LPASS_MODE_BOTH_INVALID,
 	Q6AFE_LPASS_MODE_CLK1_VALID,
@@ -12507,8 +12424,6 @@ enum afe_lpass_clk_mode {
 /* Clock ID for AHB HDMI input */
 #define Q6AFE_LPASS_CLK_ID_AHB_HDMI_INPUT                         0x400
 
-#define Q6AFE_LPASS_CLK_ID_SPDIF_CORE                             0x000
-
 /* Clock ID for the primary SPDIF output core. */
 #define AFE_CLOCK_SET_CLOCK_ID_PRI_SPDIF_OUTPUT_CORE              0x500
 /* Clock ID for the secondary SPDIF output core. */
@@ -12594,12 +12509,6 @@ struct afe_clk_set {
 #define AVS_BUILD_BRANCH_VERSION_V3		3
 
 #define AFE_PARAM_ID_CLOCK_SET_V2		0x000102E6
-
-#define AFE_CLOCK_SET_CLOCK_ROOT_DEFAULT	0x2
-#define AFE_CLOCK_DEFAULT_INTEGER_DIVIDER	0x0
-#define AFE_CLOCK_DEFAULT_M_VALUE		0x1
-#define AFE_CLOCK_DEFAULT_N_VALUE		0x2
-#define AFE_CLOCK_DEFAULT_D_VALUE		0x1
 
 #define AFE_API_VERSION_CLOCK_SET_V2		0x1
 
@@ -12958,7 +12867,6 @@ struct afe_group_device_group_cfg {
 	(AFE_PORT_ID_HSIF2_TDM_RX + 0x100)
 #define AFE_GROUP_DEVICE_ID_HSIF2_TDM_TX \
 	(AFE_PORT_ID_HSIF2_TDM_TX + 0x100)
-
 /* ID of the parameter used by #AFE_MODULE_GROUP_DEVICE to configure the
  * group device. #AFE_SVC_CMD_SET_PARAM can use this parameter ID.
  *
@@ -13587,29 +13495,10 @@ struct adm_set_compressed_device_latency {
 #define VOICEPROC_MODULE_ID_FLUENCE_PRO_VC_TX               0x00010F35
 #define VOICEPROC_PARAM_ID_FLUENCE_SOUNDFOCUS               0x00010E37
 #define VOICEPROC_PARAM_ID_FLUENCE_SOURCETRACKING           0x00010E38
-#define AUDPROC_PARAM_ID_FLUENCE_NN_SOURCE_TRACKING         0x00010B83
-#define MODULE_ID_FLUENCE_NN                                0x00010B0F
 #define MAX_SECTORS                                         8
 #define MAX_NOISE_SOURCE_INDICATORS                         3
 #define MAX_POLAR_ACTIVITY_INDICATORS                       360
 #define MAX_DOA_TRACKING_ANGLES                             2
-#define MAX_TOP_SPEAKERS                                    5
-#define MAX_FOCUS_DIRECTION                                 2
-
-struct fluence_nn_sound_focus_param {
-	int16_t mode;
-	int16_t focus_direction[MAX_FOCUS_DIRECTION];
-	int16_t focus_width;
-} __packed;
-
-struct fluence_nn_source_tracking_param {
-	int32_t speech_probablity_q20;
-	int16_t speakers[MAX_TOP_SPEAKERS];
-	int16_t reserved;
-	uint8_t polarActivity[MAX_POLAR_ACTIVITY_INDICATORS];
-	uint32_t session_time_lsw;
-	uint32_t session_time_msw;
-} __packed;
 
 struct sound_focus_param {
 	uint16_t start_angle[MAX_SECTORS];
@@ -13628,21 +13517,6 @@ struct doa_tracking_mon_param {
 	uint16_t target_angle_L16[MAX_DOA_TRACKING_ANGLES];
 	uint16_t interf_angle_L16[MAX_DOA_TRACKING_ANGLES];
 	uint8_t polar_activity[MAX_POLAR_ACTIVITY_INDICATORS];
-} __packed;
-
-struct adm_param_fluence_nn_sound_focus_t {
-	int16_t mode;
-	int16_t focus_direction[2];
-	int16_t focus_width;
-} __packed;
-
-struct adm_param_fluence_nn_source_tracking_t {
-	int32_t speech_probablity_q20;
-	int16_t speakers[5];
-	int16_t reserved;
-	uint8_t polarActivity[360];
-	uint32_t session_time_lsw;
-	uint32_t session_time_msw;
 } __packed;
 
 struct adm_param_fluence_soundfocus_t {
@@ -13811,16 +13685,4 @@ struct afe_param_id_port_data_log_disable_t
 	 */
 } __packed;
 
-#define AFE_MODULE_LIMITER  0x000102A8
-#define AFE_PARAM_ID_ENABLE 0x00010203
-struct afe_param_id_port_afe_limiter_disable_t
-{
-	uint16_t           disable_afe_limiter;
-	/** Flag for enabling or disabling data logging.
-	 * @values
-	 * - AFE_PORT_DATA_LOGGING_ENABLE  - enable data logging.
-	 * - AFE_PORT_DATA_LOGGING_DISABLE - disable data logging.
-	 */
-	 uint16_t	reserved;
-} __packed;
 #endif /*_APR_AUDIO_V2_H_ */

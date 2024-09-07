@@ -29,11 +29,6 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
-	ifdef CONFIG_SND_SOC_AR
-		include $(AUDIO_ROOT)/config/arauto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/arautoconf.h
-	endif
 	ifdef CONFIG_SND_SOC_GVM_SA8295
 		include $(AUDIO_ROOT)/config/sa8295gvmauto.conf
 		export
@@ -60,10 +55,6 @@ else
 		ifeq ($(CONFIG_ARCH_KONA), y)
 			include $(AUDIO_ROOT)/config/konaauto.conf
 			INCS    +=  -include $(AUDIO_ROOT)/config/konaautoconf.h
-		endif
-		ifeq ($(CONFIG_ARCH_LAHAINA), y)
-			include $(AUDIO_ROOT)/config/lahainaauto.conf
-			INCS    +=  -include $(AUDIO_ROOT)/config/lahainaautoconf.h
 		endif
 		ifeq ($(CONFIG_ARCH_LITO), y)
 			include $(AUDIO_ROOT)/config/litoauto.conf
@@ -251,10 +242,6 @@ ifdef CONFIG_DIGITAL_CDC_RSC_MGR
 	Q6_OBJS += digital-cdc-rsc-mgr.o
 endif
 
-ifdef CONFIG_MMHARDWARE_DETECTION
-MMHARDWARE_SYSFS += mmhardware_sysfs.o
-endif
-
 LINUX_INC +=	-Iinclude/linux
 
 INCS +=		$(COMMON_INC) \
@@ -262,10 +249,18 @@ INCS +=		$(COMMON_INC) \
 
 EXTRA_CFLAGS += $(INCS)
 
-CDEFINES += -DCONFIG_TARGET_PRODUCT_VILI
+ifneq (,$(filter $(TARGET_PRODUCT),cetus))
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CETUS
+endif
 
-ifdef CONFIG_MIUS_PROXIMITY
-	CDEFINES += -DCONFIG_QGKI_SYSTEM
+ifeq ($(TARGET_PRODUCT), renoir)
+	CDEFINES += -DCONFIG_SND_SOC_TFA9874_FOR_DAVI
+	CDEFINES += -DTFA_NON_DSP_SOLUTION
+endif
+
+ifeq ($(TARGET_PRODUCT), mona)
+	CDEFINES += -DCONFIG_SND_SOC_AW88263S_TDM
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_MONA
 endif
 
 CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
@@ -278,15 +273,7 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-Werror\
 		-D__linux__
 
-# TEST FOR STAR
-ifneq (,$(filter $(TARGET_PRODUCT), star mars))
-        CDEFINES += -DAUDIO_FORCE_RESTART_ADSP
-endif
-
-ifeq ($(TARGET_PRODUCT), $(filter $(TARGET_PRODUCT), zijin taoyao))
-CDEFINES += -DAUDIO_FORCE_RESTART_ADSP_TEMP
-endif
-
+# CDEFINES += -DAUDIO_FORCE_RESTART_ADSP
 
 KBUILD_CPPFLAGS += $(CDEFINES)
 
@@ -339,6 +326,3 @@ q6_pdr_dlkm-y := $(QDSP6_PDR_OBJS)
 
 obj-$(CONFIG_MSM_QDSP6_NOTIFIER) += q6_notifier_dlkm.o
 q6_notifier_dlkm-y := $(QDSP6_NOTIFIER_OBJS)
-
-obj-$(CONFIG_MMHARDWARE_DETECTION) += mmhardware_sysfs_dlkm.o
-mmhardware_sysfs_dlkm-y := $(MMHARDWARE_SYSFS)

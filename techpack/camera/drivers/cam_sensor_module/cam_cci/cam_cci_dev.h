@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CCI_DEV_H_
@@ -51,8 +50,8 @@
 #define CCI_READ_MAX 256
 #define CCI_READ_MAX_V_1_2 0xE
 #define CCI_I2C_READ_MAX_RETRIES 3
-#define CCI_I2C_MAX_READ 20480
-#define CCI_I2C_MAX_WRITE 20480
+#define CCI_I2C_MAX_READ 10240
+#define CCI_I2C_MAX_WRITE 10240
 #define CCI_I2C_MAX_BYTE_COUNT 65535
 
 #define CAMX_CCI_DEV_NAME "cam-cci-driver"
@@ -66,7 +65,6 @@
 #define CAM_CCI_TIMEOUT_DUMP_EN   BIT(2)
 
 #define CCI_VERSION_1_2_9 0x10020009
-#define REPORT_IDSIZE 16
 enum cci_i2c_sync {
 	MSM_SYNC_DISABLE,
 	MSM_SYNC_ENABLE,
@@ -225,7 +223,7 @@ struct cci_device {
 	uint32_t cpas_handle;
 	uint32_t irq_status1;
 	spinlock_t lock_status;
-	bool is_burst_read[MASTER_MAX];
+	bool is_burst_read;
 	uint32_t irqs_disabled;
 	struct mutex init_mutex;
 	uint64_t  dump_en;
@@ -275,7 +273,7 @@ struct cam_sensor_cci_client {
 	uint16_t retries;
 	uint16_t id_map;
 	uint16_t cci_device;
-	uint16_t disable_optmz; //xiaomi add the flag to disable CCI optimization
+	uint16_t disable_optmz;
 };
 
 struct cam_cci_ctrl {

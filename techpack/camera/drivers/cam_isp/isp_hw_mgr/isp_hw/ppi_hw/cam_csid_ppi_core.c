@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -75,7 +75,7 @@ static int cam_csid_ppi_enable_hw(struct cam_csid_ppi_hw  *ppi_hw)
 
 	for (i = 0; i < soc_info->num_clk; i++) {
 		rc = cam_soc_util_clk_enable(soc_info->clk[i],
-			soc_info->clk_name[i], 0, NULL);
+			soc_info->clk_name[i], 0);
 		if (rc)
 			goto clk_disable;
 	}
@@ -163,7 +163,9 @@ static int cam_csid_ppi_init_hw(void *hw_priv, void *init_args,
 {
 	int i, rc = 0;
 	uint32_t num_lanes;
+	uint32_t lanes[CAM_CSID_PPI_HW_MAX] = {0, 0, 0, 0};
 	uint32_t cphy;
+	bool dl0, dl1;
 	uint32_t ppi_cfg_val = 0;
 	struct cam_csid_ppi_hw                *ppi_hw;
 	struct cam_hw_info                    *ppi_hw_info;
@@ -178,6 +180,7 @@ static int cam_csid_ppi_init_hw(void *hw_priv, void *init_args,
 		goto end;
 	}
 
+	dl0 = dl1 = false;
 	ppi_hw_info = (struct cam_hw_info *)hw_priv;
 	ppi_hw      = (struct cam_csid_ppi_hw *)ppi_hw_info->core_info;
 	ppi_reg     = ppi_hw->ppi_info->ppi_reg;
@@ -192,15 +195,30 @@ static int cam_csid_ppi_init_hw(void *hw_priv, void *init_args,
 	CAM_DBG(CAM_ISP, "lane_cfg  0x%x | num_lanes  0x%x | lane_type 0x%x",
 		ppi_cfg.lane_cfg, num_lanes, cphy);
 
-	if (cphy) {
-		ppi_cfg_val |= PPI_CFG_CPHY_DLX_SEL(0);
-		ppi_cfg_val |= PPI_CFG_CPHY_DLX_SEL(1);
-	} else {
-		ppi_cfg_val = 0;
+	for (i = 0; i < num_lanes; i++) {
+		lanes[i] = ppi_cfg.lane_cfg & (0x3 << (4 * i));
+		(lanes[i] < 2) ? (dl0 = true) : (dl1 = true);
+		CAM_DBG(CAM_ISP, "lanes[%d] %d", i, lanes[i]);
 	}
 
-	for (i = 0; i < CAM_CSID_PPI_LANES_MAX; i++)
-		ppi_cfg_val |= PPI_CFG_CPHY_DLX_EN(i);
+	if (num_lanes) {
+		if (cphy) {
+			for (i = 0; i < num_lanes; i++) {
+				ppi_cfg_val |= PPI_CFG_CPHY_DLX_SEL(lanes[i]);
+				ppi_cfg_val |= PPI_CFG_CPHY_DLX_EN(lanes[i]);
+			}
+		} else {
+			if (dl0)
+				ppi_cfg_val |= PPI_CFG_CPHY_DLX_EN(0);
+			if (dl1)
+				ppi_cfg_val |= PPI_CFG_CPHY_DLX_EN(1);
+		}
+	} else {
+		CAM_ERR(CAM_ISP,
+			"Number of lanes to enable is cannot be zero");
+		rc = -1;
+		goto end;
+	}
 
 	CAM_DBG(CAM_ISP, "ppi_cfg_val 0x%x", ppi_cfg_val);
 	soc_info = &ppi_hw->hw_info->soc_info;
@@ -348,6 +366,7 @@ irqreturn_t cam_csid_ppi_irq(int irq_num, void *data)
 
 handle_fatal_error:
 	if (fatal_err_detected) {
+		cam_debug_hw_trigger(CAM_ISP);
 		CAM_ERR(CAM_ISP, "PPI: %d irq_status:0x%x",
 			ppi_hw->hw_intf->hw_idx, irq_status);
 		for (i = 0; i < CAM_CSID_PPI_LANES_MAX; i++)

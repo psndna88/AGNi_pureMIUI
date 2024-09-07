@@ -191,9 +191,6 @@ enum cam_camnoc_port_type {
 	CAM_CAMNOC_TFE_1,
 	CAM_CAMNOC_TFE_2,
 	CAM_CAMNOC_OPE,
-	CAM_CAMNOC_IFE01234_RDI_WRITE,
-	CAM_CAMNOC_IFE01_NRDI_WRITE,
-	CAM_CAMNOC_IFE2_NRDI_WRITE,
 };
 
 /**
@@ -317,34 +314,6 @@ struct cam_camnoc_err_logger_info {
 };
 
 /**
- * struct cam_camnoc_fifo_lvl_info : Struct for fifo fill level registers
- * @IFE0_nRDI_maxwr_offset: Register offset for fill level for IFE0
- * @IFE1_nRDI_maxwr_offset: Register offset for fill level for IFE1
- * @IFE0123_RDI_maxwr_low_offset: Register offset for RDI
- * @ife_linear: Register offset for ife linear
- * @ife_rdi_wr: Register offset for rdi wr
- * @ife_ubwc_stats: Register offset for ubwc stats
- * @IFE02_MAXWR_LOW: Register offset for IFE02
- * @IFE13_MAXWR_LOW: Register offset for IFE13
- * @IFE01_MAXWR_LOW: Register offset for IFE01
- * @IFE23_MAXWR_LOW: Register offset for IFE23
- */
-struct cam_camnoc_fifo_lvl_info {
-	uint32_t IFE0_nRDI_maxwr_offset;
-	uint32_t IFE1_nRDI_maxwr_offset;
-	uint32_t IFE0123_RDI_maxwr_offset;
-	uint32_t ife_linear;
-	uint32_t ife_rdi_wr;
-	uint32_t ife_ubwc_stats;
-	uint32_t IFE02_MAXWR_LOW;
-	uint32_t IFE13_MAXWR_LOW;
-	uint32_t IFE01_MAXWR_LOW;
-	uint32_t IFE23_MAXWR_LOW;
-	uint32_t IFE0_MAXWR_LOW;
-	uint32_t IFE1_MAXWR_LOW;
-};
-
-/**
  * struct cam_camnoc_info : Overall CAMNOC settings info
  *
  * @specific: Pointer to CAMNOC SPECIFICTONTTPTR settings
@@ -354,7 +323,6 @@ struct cam_camnoc_fifo_lvl_info {
  * @irq_err_size: Array size of IRQ Error settings
  * @err_logger: Pointer to CAMNOC IRQ Error logger read registers
  * @errata_wa_list: HW Errata workaround info
- * @fill_level_register: Fill level registers
  *
  */
 struct cam_camnoc_info {
@@ -365,7 +333,6 @@ struct cam_camnoc_info {
 	int irq_err_size;
 	struct cam_camnoc_err_logger_info *err_logger;
 	struct cam_cpas_hw_errata_wa_list *errata_wa_list;
-	struct cam_camnoc_fifo_lvl_info *fill_lvl_register;
 };
 
 /**
@@ -384,18 +351,6 @@ struct cam_cpas_work_payload {
 	uint32_t irq_data;
 	ktime_t workq_scheduled_ts;
 	struct work_struct work;
-};
-
-/**
- * struct cam_cpas_camnoc_qchannel : Cpas camnoc qchannel info
- *
- * @qchannel_ctrl: offset to configure to control camnoc qchannel interface
- * @qchannel_status: offset to read camnoc qchannel interface status
- *
- */
-struct cam_cpas_camnoc_qchannel {
-	uint32_t qchannel_ctrl;
-	uint32_t qchannel_status;
 };
 
 #endif /* _CAM_CPASTOP_HW_H_ */

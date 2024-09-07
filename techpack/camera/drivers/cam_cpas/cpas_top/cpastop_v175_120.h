@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CPASTOP_V175_120_H_
@@ -204,7 +204,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x4230, /* SPECIFIC_CDM_PRIORITYLUT_LOW */
@@ -212,7 +211,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x4234, /* SPECIFIC_CDM_PRIORITYLUT_HIGH */
@@ -220,7 +218,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			/* cdm_main_SpecificToNttpTr_Urgency_Low */
@@ -231,7 +228,6 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x4240, /* SPECIFIC_CDM_DANGERLUT_LOW */
@@ -239,7 +235,6 @@ static struct cam_camnoc_specific
 		},
 		.safe_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x4248, /* SPECIFIC_CDM_SAFELUT_LOW */
@@ -247,7 +242,6 @@ static struct cam_camnoc_specific
 		},
 		.ubwc_ctl = {
 			.enable = false,
-			.is_fuse_based = false,
 		},
 	},
 	{
@@ -255,7 +249,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC_IFE0123_PRIORITYLUT_LOW */
@@ -264,7 +257,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC_IFE0123_PRIORITYLUT_HIGH */
@@ -273,7 +265,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			.offset = 0x3638, /* SPECIFIC_IFE0123_URGENCY_LOW */
@@ -285,14 +276,12 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x3640, /* SPECIFIC_IFE0123_DANGERLUT_LOW */
 			.value = 0xFFFFFF00,
 		},
 		.safe_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x3648, /* SPECIFIC_IFE0123_SAFELUT_LOW */
 			.value = 0xF,
@@ -304,7 +293,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = false,
-			.is_fuse_based = false,
 		},
 	},
 	{
@@ -312,7 +300,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3A30, /* SPECIFIC_IFE0_PRIORITYLUT_LOW */
@@ -320,7 +307,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3A34, /* SPECIFIC_IFE0_PRIORITYLUT_HIGH */
@@ -328,7 +314,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			.offset = 0x3A38, /* SPECIFIC_IFE0_URGENCY_LOW */
@@ -340,14 +325,12 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x3A40, /* SPECIFIC_IFE0_DANGERLUT_LOW */
 			.value = 0xFFFFFF00,
 		},
 		.safe_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x3A48, /* SPECIFIC_IFE0_SAFELUT_LOW */
 			.value = 0xF,
@@ -359,7 +342,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3B88, /* SPECIFIC_IFE0_ENCCTL_LOW */
@@ -372,7 +354,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3230, /* SPECIFIC_IFE1_PRIORITYLUT_LOW */
@@ -380,7 +361,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3234, /* SPECIFIC_IFE1_PRIORITYLUT_HIGH */
@@ -388,7 +368,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			.offset = 0x3238, /* SPECIFIC_IFE1_URGENCY_LOW */
@@ -400,14 +379,12 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x3240, /* SPECIFIC_IFE1_DANGERLUT_LOW */
 			.value = 0x00000000,
 		},
 		.safe_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x3248, /* SPECIFIC_IFE1_SAFELUT_LOW */
 			.value = 0xF,
@@ -419,7 +396,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = false,
-			.is_fuse_based = false,
 		},
 	},
 	{
@@ -427,7 +403,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x5430, /* SPECIFIC_IFE1_WR_PRIORITYLUT_LOW */
@@ -435,7 +410,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC_IFE1_WR_PRIORITYLUT_HIGH */
@@ -444,7 +418,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			.offset = 0x5438, /* SPECIFIC_IFE1_WR_URGENCY_LOW */
@@ -456,14 +429,12 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x5440, /* SPECIFIC_IFE1_WR_DANGERLUT_LOW */
 			.value = 0xFFFFFF00,
 		},
 		.safe_lut = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.offset = 0x5448, /* SPECIFIC_IFE1_WR_SAFELUT_LOW */
 			.value = 0xF,
@@ -475,7 +446,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x5588, /* SPECIFIC_IFE1_WR_ENCCTL_LOW */
@@ -487,7 +457,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2E30, /* SPECIFIC_IBL_RD_PRIORITYLUT_LOW */
@@ -495,7 +464,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2E34, /* SPECIFIC_IBL_RD_PRIORITYLUT_HIGH */
@@ -503,7 +471,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			.offset = 0x2E38, /* SPECIFIC_IBL_RD_URGENCY_LOW */
@@ -515,7 +482,6 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2E40, /* SPECIFIC_IBL_RD_DANGERLUT_LOW */
@@ -523,7 +489,6 @@ static struct cam_camnoc_specific
 		},
 		.safe_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2E48, /* SPECIFIC_IBL_RD_SAFELUT_LOW */
@@ -536,7 +501,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2F08, /* SPECIFIC_IBL_RD_DECCTL_LOW */
@@ -548,7 +512,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2A30, /* SPECIFIC_IBL_WR_PRIORITYLUT_LOW */
@@ -556,7 +519,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2A34, /* SPECIFIC_IBL_WR_PRIORITYLUT_HIGH */
@@ -564,7 +526,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			.offset = 0x2A38, /* SPECIFIC_IBL_WR_URGENCY_LOW */
@@ -576,7 +537,6 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2A40, /* SPECIFIC_IBL_WR_DANGERLUT_LOW */
@@ -584,7 +544,6 @@ static struct cam_camnoc_specific
 		},
 		.safe_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2A48, /* SPECIFIC_IBL_WR_SAFELUT_LOW */
@@ -597,7 +556,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2B88, /* SPECIFIC_IBL_WR_ENCCTL_LOW */
@@ -609,7 +567,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC_IPE_VID_DISP_PRIORITYLUT_LOW */
@@ -618,7 +575,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC_IPE_VID_DISP_PRIORITYLUT_HIGH */
@@ -627,7 +583,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 1,
 			/* SPECIFIC_IPE_VID_DISP_URGENCY_LOW */
@@ -640,7 +595,6 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC__IPE_VID_DISP_DANGERLUT_LOW */
@@ -649,7 +603,6 @@ static struct cam_camnoc_specific
 		},
 		.safe_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			/* SPECIFIC_IPE_VID_DISP_SAFELUT_LOW */
@@ -663,7 +616,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x5F88, /* SPECIFIC_IBL_WR_ENCCTL_LOW */
@@ -676,7 +628,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2630, /* SPECIFIC_JPEG_PRIORITYLUT_LOW */
@@ -684,7 +635,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2634, /* SPECIFIC_JPEG_PRIORITYLUT_HIGH */
@@ -692,7 +642,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2638, /* SPECIFIC_JPEG_URGENCY_LOW */
@@ -700,7 +649,6 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2640, /* SPECIFIC_JPEG_DANGERLUT_LOW */
@@ -708,7 +656,6 @@ static struct cam_camnoc_specific
 		},
 		.safe_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2648, /* SPECIFIC_JPEG_SAFELUT_LOW */
@@ -716,7 +663,6 @@ static struct cam_camnoc_specific
 		},
 		.ubwc_ctl = {
 			.enable = false,
-			.is_fuse_based = false,
 		},
 	},
 	{
@@ -724,7 +670,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.priority_lut_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3E30, /* SPECIFIC_FD_PRIORITYLUT_LOW */
@@ -732,7 +677,6 @@ static struct cam_camnoc_specific
 		},
 		.priority_lut_high = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3E34, /* SPECIFIC_FD_PRIORITYLUT_HIGH */
@@ -740,7 +684,6 @@ static struct cam_camnoc_specific
 		},
 		.urgency = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3E38, /* SPECIFIC_FD_URGENCY_LOW */
@@ -748,7 +691,6 @@ static struct cam_camnoc_specific
 		},
 		.danger_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3E40, /* SPECIFIC_FD_DANGERLUT_LOW */
@@ -756,7 +698,6 @@ static struct cam_camnoc_specific
 		},
 		.safe_lut = {
 			.enable = false,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3E48, /* SPECIFIC_FD_SAFELUT_LOW */
@@ -764,7 +705,6 @@ static struct cam_camnoc_specific
 		},
 		.ubwc_ctl = {
 			.enable = false,
-			.is_fuse_based = false,
 		},
 
 	},
@@ -774,7 +714,6 @@ static struct cam_camnoc_specific
 		.enable = true,
 		.flag_out_set0_low = {
 			.enable = true,
-			.is_fuse_based = false,
 			.access_type = CAM_REG_TYPE_WRITE,
 			.masked_value = 0,
 			.offset = 0x2288,
@@ -808,12 +747,6 @@ static struct cam_cpas_hw_errata_wa_list cam175_cpas120_errata_wa_list = {
 	},
 };
 
-static struct cam_camnoc_fifo_lvl_info cam175_cpas120_camnoc_fifo_info = {
-	.IFE0_nRDI_maxwr_offset = 0x3A20,
-	.IFE1_nRDI_maxwr_offset = 0x5420,
-	.IFE0123_RDI_maxwr_offset = 0x3620,
-};
-
 static struct cam_camnoc_info cam175_cpas120_camnoc_info = {
 	.specific = &cam_cpas_v175_120_camnoc_specific[0],
 	.specific_size =  ARRAY_SIZE(cam_cpas_v175_120_camnoc_specific),
@@ -822,7 +755,6 @@ static struct cam_camnoc_info cam175_cpas120_camnoc_info = {
 	.irq_err_size = ARRAY_SIZE(cam_cpas_v175_120_irq_err),
 	.err_logger = &cam175_cpas120_err_logger_offsets,
 	.errata_wa_list = &cam175_cpas120_errata_wa_list,
-	.fill_lvl_register = &cam175_cpas120_camnoc_fifo_info,
 };
 
 #endif /* _CPASTOP_V175_120_H_ */

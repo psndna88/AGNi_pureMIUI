@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -204,7 +204,6 @@ static int cam_top_tpg_ver1_start(
 	struct cam_top_tpg_ver1_reg_offset           *tpg_reg;
 	struct cam_top_tpg_cfg                       *tpg_data;
 	uint32_t                                      i, val;
-	uint32_t in_format = 0;
 
 	if (!hw_priv || !start_args ||
 		(arg_size != sizeof(struct cam_isp_resource_node))) {
@@ -245,7 +244,6 @@ static int cam_top_tpg_ver1_start(
 			tpg_reg->tpg_dt_0_cfg_2 + 0x10 * i);
 	}
 
-	/* configure one DT, infinite frames */
 	val = (tpg_num_dt_map[tpg_data->num_active_dts-1] <<
 		 tpg_reg->tpg_num_dts_shift_val) | tpg_data->vc_num[0];
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base + tpg_reg->tpg_vc_cfg0);
@@ -262,57 +260,6 @@ static int cam_top_tpg_ver1_start(
 		cam_io_w_mb(0x2581F4,
 		soc_info->reg_map[0].mem_base + tpg_reg->tpg_vc_cfg1);
 
-	/* configure tpg pattern */
-	in_format = tpg_data->dt_cfg[0].encode_format & 0xF;
-	val = in_format << tpg_reg->tpg_dt_encode_format_shift;
-
-	switch (tpg_hw->tpg_pattern) {
-	case 0x0:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x1:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x2:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x3:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x4:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x5:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x6:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x7:
-		val = val | tpg_hw->tpg_pattern;
-		break;
-	case 0x8:
-		/* unicolor bar selection */
-		val = 0x1 | (1 << tpg_reg->top_unicolor_bar_shift);
-		cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
-			tpg_reg->tpg_color_bar_cfg);
-		val = (in_format << tpg_reg->tpg_dt_encode_format_shift) |
-			tpg_hw->tpg_pattern;
-		break;
-	default:
-		/* frame with split color bar */
-		val =  1 << tpg_reg->tpg_split_en_shift;
-		cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
-			tpg_reg->tpg_color_bar_cfg);
-		val = (in_format << tpg_reg->tpg_dt_encode_format_shift) |
-			CAM_TOP_TPG_DEFAULT_PATTERN;
-		break;
-	}
-
-	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
-		tpg_reg->tpg_dt_0_cfg_2);
-
-	/* config pix pattern */
 	val = (1 << tpg_reg->tpg_split_en_shift);
 	cam_io_w_mb(tpg_data->pix_pattern, soc_info->reg_map[0].mem_base +
 		tpg_reg->tpg_common_gen_cfg);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/device.h>
@@ -59,20 +59,15 @@ static int cam_lrme_dev_open(struct v4l2_subdev *sd,
 {
 	struct cam_lrme_dev *lrme_dev = g_lrme_dev;
 
-	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_LOCK);
-
 	if (!lrme_dev) {
 		CAM_ERR(CAM_LRME,
 			"LRME Dev not initialized, dev=%pK", lrme_dev);
-		cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
 		return -ENODEV;
 	}
 
 	mutex_lock(&lrme_dev->lock);
 	lrme_dev->open_cnt++;
 	mutex_unlock(&lrme_dev->lock);
-
-	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
 
 	return 0;
 }

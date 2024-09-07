@@ -51,7 +51,6 @@ struct elliptic_system_configuration_parameter {
 		int32_t context;
 		int32_t capture;
 		int32_t input_channels;
-		int32_t re_send;
 	};
 };
 
@@ -792,10 +791,7 @@ int elliptic_system_configuration_param_get(
 		ucontrol->value.integer.value[0] =
 			elliptic_system_configuration_cache.input_channels;
 		break;
-	case ELLIPTIC_SYSTEM_CONFIGURATION_RE_SEND:
-		ucontrol->value.integer.value[0] =
-			elliptic_system_configuration_cache.re_send;
-		break;
+
 	default:
 		EL_PRINT_E("Invalid mixer control");
 		return -EINVAL;
@@ -955,13 +951,7 @@ int elliptic_system_configuration_param_put(
 		param.context =
 		elliptic_system_configuration_cache.input_channels;
 		break;
-	case ELLIPTIC_SYSTEM_CONFIGURATION_RE_SEND:
-		elliptic_system_configuration_cache.re_send =
-			ucontrol->value.integer.value[0];
-		param.type = ESCPT_RE_SEND;
-		param.re_send =
-			elliptic_system_configuration_cache.re_send;
-		break;
+
 	default:
 		return -EINVAL;
 	}
@@ -1284,14 +1274,7 @@ static const struct snd_kcontrol_new ultrasound_filter_mixer_controls[] = {
 	0,
 	elliptic_system_configuration_param_get,
 	elliptic_system_configuration_param_put),
-    
-	SOC_SINGLE_EXT("Ultrasound RE SEND",
-	ELLIPTIC_SYSTEM_CONFIGURATION,
-	ELLIPTIC_SYSTEM_CONFIGURATION_RE_SEND,
-	1,
-	0,
-	elliptic_system_configuration_param_get,
-	elliptic_system_configuration_param_put),
+
 };
 
 

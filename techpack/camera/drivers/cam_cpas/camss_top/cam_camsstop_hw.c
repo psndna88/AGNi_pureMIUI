@@ -79,7 +79,6 @@ int cam_camsstop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 	internal_ops->power_off = NULL;
 	internal_ops->setup_qos_settings = NULL;
 	internal_ops->print_poweron_settings = NULL;
-	internal_ops->qchannel_handshake = NULL;
 
 	return 0;
 }

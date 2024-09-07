@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #ifndef __UAPI_LINUX_CAM_REQ_MGR_H
@@ -45,8 +44,8 @@
  */
 #define CAM_REQ_MGR_MAX_HANDLES           64
 
-// XIAOMI modify CAM_REQ_MGR_MAX_HANDLES_V2 from 128 to 192 for parallelVTCam need more session handles.
-#define CAM_REQ_MGR_MAX_HANDLES_V2        192
+// modify CAM_REQ_MGR_MAX_HANDLES_V2 from 128 to 256 for parallelVTCam need more session handles.
+#define CAM_REQ_MGR_MAX_HANDLES_V2        256
 
 #define MAX_LINKS_PER_SESSION             2
 

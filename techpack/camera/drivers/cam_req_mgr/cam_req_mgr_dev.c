@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -9,7 +8,6 @@
 #include <linux/platform_device.h>
 #include <linux/highmem.h>
 #include <linux/types.h>
-#include <linux/rwsem.h>
 
 #include <mm/slab.h>
 
@@ -31,13 +29,11 @@
 #include "cam_compat.h"
 #include "cam_cpas_hw.h"
 
-#define CAM_REQ_MGR_EVENT_MAX 60
+#define CAM_REQ_MGR_EVENT_MAX 120
 
 static struct cam_req_mgr_device g_dev;
 struct kmem_cache *g_cam_req_mgr_timer_cachep;
 static struct list_head cam_req_mgr_ordered_sd_list;
-
-DECLARE_RWSEM(rwsem_lock);
 
 static struct device_attribute camera_debug_sysfs_attr =
 	__ATTR(debug_node, 0600, NULL, cam_debug_sysfs_node_store);
@@ -107,28 +103,9 @@ static void cam_v4l2_device_cleanup(void)
 	g_dev.v4l2_dev = NULL;
 }
 
-
-void cam_req_mgr_rwsem_read_op(enum cam_subdev_rwsem lock)
-{
-	if (lock == CAM_SUBDEV_LOCK)
-		down_read(&rwsem_lock);
-	else if (lock == CAM_SUBDEV_UNLOCK)
-		up_read(&rwsem_lock);
-}
-
-static void cam_req_mgr_rwsem_write_op(enum cam_subdev_rwsem lock)
-{
-	if (lock == CAM_SUBDEV_LOCK)
-		down_write(&rwsem_lock);
-	else if (lock == CAM_SUBDEV_UNLOCK)
-		up_write(&rwsem_lock);
-}
-
 static int cam_req_mgr_open(struct file *filep)
 {
 	int rc;
-
-	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_LOCK);
 
 	mutex_lock(&g_dev.cam_lock);
 	if (g_dev.open_cnt >= 1) {
@@ -156,14 +133,12 @@ static int cam_req_mgr_open(struct file *filep)
 	}
 
 	mutex_unlock(&g_dev.cam_lock);
-	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 	return rc;
 
 mem_mgr_init_fail:
 	v4l2_fh_release(filep);
 end:
 	mutex_unlock(&g_dev.cam_lock);
-	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 	return rc;
 }
 
@@ -193,14 +168,10 @@ static int cam_req_mgr_close(struct file *filep)
 	CAM_WARN(CAM_CRM,
 		"release invoked associated userspace process has died, open_cnt: %d",
 		g_dev.open_cnt);
-
-	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_LOCK);
-
 	mutex_lock(&g_dev.cam_lock);
 
 	if (g_dev.open_cnt <= 0) {
 		mutex_unlock(&g_dev.cam_lock);
-		cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 		return -EINVAL;
 	}
 
@@ -231,8 +202,6 @@ static int cam_req_mgr_close(struct file *filep)
 	cam_req_mgr_util_free_hdls();
 	cam_mem_mgr_deinit();
 	mutex_unlock(&g_dev.cam_lock);
-
-	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 
 	return 0;
 }

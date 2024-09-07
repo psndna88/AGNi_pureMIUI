@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_OPE_HW_100_H
@@ -9,7 +9,6 @@
 #define OPE_BUS_RD_TYPE_BAYER            0x0
 #define OPE_BUS_RD_TYPE_YUV_Y            0x0
 #define OPE_BUS_RD_TYPE_YUC_C            0x1
-#define OPE_BUS_RD_TYPE_CDM              0x2
 
 #define OPE_BUS_WR_TYPE_VID_Y            0x0
 #define OPE_BUS_WR_TYPE_VID_C            0x1
@@ -19,81 +18,6 @@
 #define OPE_BUS_WR_TYPE_RS               0x5
 #define OPE_BUS_WR_TYPE_IHIST            0x6
 #define OPE_BUS_WR_TYPE_LTM              0x7
-
-static struct cam_ope_pid_mid_info g_ope_mid_info[OPE_DEV_MAX][MAX_RW_CLIENTS] = {
-	{
-		{
-			.cam_ope_res_type = OPE_IN_RES_FULL,
-			.pid = 0,
-			.mid = 0,
-			.read = true,
-		},
-		{
-			.cam_ope_res_type = OPE_IN_RES_FULL,
-			.pid = 0,
-			.mid = 1,
-			.read = true,
-		},
-		{
-			.cam_ope_res_type = OPE_IN_RES_FULL,
-			.pid = 0,
-			.mid = 2,
-			.read = true,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_VIDEO,
-			.pid = 1,
-			.mid = 16,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_VIDEO,
-			.pid = 1,
-			.mid = 17,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_DISP,
-			.pid = 1,
-			.mid = 18,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_DISP,
-			.pid = 1,
-			.mid = 19,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_ARGB,
-			.pid = 1,
-			.mid = 20,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_STATS_RS,
-			.pid = 1,
-			.mid = 21,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_STATS_IHIST,
-			.pid = 1,
-			.mid = 22,
-			.read = false,
-		},
-		{
-			.cam_ope_res_type = OPE_OUT_RES_STATS_LTM,
-			.pid = 1,
-			.mid = 23,
-			.read = false,
-		},
-	},
-};
-
-static struct cam_ope_common common_data = {
-	.ope_mid_info = g_ope_mid_info,
-};
 
 enum cam_ope_bus_rd_unpacker_format {
 	BUS_RD_VER1_PACKER_FMT_PLAIN_128_BYPASS            = 0x0,
@@ -146,9 +70,6 @@ static struct cam_ope_debug_register ope_debug_regs[OPE_MAX_DEBUG_REGISTER] = {
 	{
 		.offset = 0xD0,
 	},
-	{
-		.offset = 0xD4,
-	},
 };
 
 static struct cam_ope_top_reg ope_top_reg = {
@@ -166,8 +87,7 @@ static struct cam_ope_top_reg ope_top_reg = {
 	.violation_status    = 0x28,
 	.throttle_cnt_cfg    = 0x2C,
 	.debug_cfg           = 0xDC,
-	.scratch_reg         = 0x1F0,
-	.num_debug_registers = 10,
+	.num_debug_registers = 9,
 	.debug_regs          = ope_debug_regs,
 };
 
@@ -180,8 +100,8 @@ static struct cam_ope_top_reg_val ope_top_reg_val = {
 	.incr_mask     = 0xF0000000,
 	.incr_shift    = 0x1B,
 	.irq_mask      = 0x0000000F,
-	.sw_reset_cmd  = 0x2,
-	.hw_reset_cmd  = 0x1,
+	.sw_reset_cmd     = 0x2,
+	.hw_reset_cmd     = 0x1,
 	.irq_set_clear = 0x1,
 	.rst_done      = 0x1,
 	.we_done       = 0x2,
@@ -726,15 +646,6 @@ static struct cam_ope_pp_reg ope_pp_reg = {
 		{
 			.hw_status = 0x3C04,
 		},
-		{
-			.hw_status = 0x3E04,
-		},
-		{
-			.hw_status = 0x4004,
-		},
-		{
-			.hw_status = 0x4204,
-		},
 	},
 };
 
@@ -746,7 +657,6 @@ static struct ope_hw ope_hw_100 = {
 	.bus_wr_reg  = &ope_bus_wr_reg,
 	.bus_wr_reg_val  = &ope_bus_wr_reg_val,
 	.pp_reg  = &ope_pp_reg,
-	.common  = &common_data,
 };
 
 #endif /* CAM_OPE_HW_100_H */

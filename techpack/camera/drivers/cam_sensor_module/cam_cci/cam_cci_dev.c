@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_cci_dev.h"
@@ -77,65 +77,6 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		"BASE: %pK, irq0:%x irq1:%x",
 		base, irq_status0, irq_status1);
 
-	cam_io_w_mb(irq_status0, base + CCI_IRQ_CLEAR_0_ADDR);
-	cam_io_w_mb(irq_status1, base + CCI_IRQ_CLEAR_1_ADDR);
-
-	reg_bmsk = CCI_IRQ_MASK_1_RMSK;
-	if ((irq_status1 & CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD) &&
-	!(irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_DONE_BMSK)) {
-		reg_bmsk &= ~CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
-		spin_lock_irqsave(&cci_dev->lock_status, flags);
-		cci_dev->irqs_disabled |=
-			CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
-		spin_unlock_irqrestore(&cci_dev->lock_status, flags);
-	}
-
-	if ((irq_status1 & CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD) &&
-	!(irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_DONE_BMSK)) {
-		reg_bmsk &= ~CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
-		spin_lock_irqsave(&cci_dev->lock_status, flags);
-		cci_dev->irqs_disabled |=
-			CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
-		spin_unlock_irqrestore(&cci_dev->lock_status, flags);
-	}
-
-	if (reg_bmsk != CCI_IRQ_MASK_1_RMSK) {
-		cam_io_w_mb(reg_bmsk, base + CCI_IRQ_MASK_1_ADDR);
-		CAM_DBG(CAM_CCI, "Updating the reg mask for irq1: 0x%x",
-			reg_bmsk);
-	} else if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_DONE_BMSK ||
-		irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_DONE_BMSK) {
-		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_DONE_BMSK) {
-			spin_lock_irqsave(&cci_dev->lock_status, flags);
-			if (cci_dev->irqs_disabled &
-				CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD) {
-				irq_update_rd_done |=
-					CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
-				cci_dev->irqs_disabled &=
-					~CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
-			}
-			spin_unlock_irqrestore(&cci_dev->lock_status, flags);
-		}
-		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_DONE_BMSK) {
-			spin_lock_irqsave(&cci_dev->lock_status, flags);
-			if (cci_dev->irqs_disabled &
-				CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD) {
-				irq_update_rd_done |=
-					CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
-				cci_dev->irqs_disabled &=
-					~CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
-			}
-			spin_unlock_irqrestore(&cci_dev->lock_status, flags);
-		}
-	}
-
-	if (irq_update_rd_done != 0) {
-		irq_update_rd_done |= cam_io_r_mb(base + CCI_IRQ_MASK_1_ADDR);
-		cam_io_w_mb(irq_update_rd_done, base + CCI_IRQ_MASK_1_ADDR);
-	}
-
-	cam_io_w_mb(0x1, base + CCI_IRQ_GLOBAL_CLEAR_CMD_ADDR);
-
 	if (irq_status0 & CCI_IRQ_STATUS_0_RST_DONE_ACK_BMSK) {
 		struct cam_cci_master_info *cci_master_info;
 		if (cci_dev->cci_master_info[MASTER_0].reset_pending == true) {
@@ -171,7 +112,7 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		(!rd_done_th_assert)) {
 		cci_dev->cci_master_info[MASTER_0].status = 0;
 		rd_done_th_assert = true;
-		if (cci_dev->is_burst_read[MASTER_0])
+		if (cci_dev->is_burst_read)
 			complete(
 			&cci_dev->cci_master_info[MASTER_0].th_complete);
 		complete(&cci_dev->cci_master_info[MASTER_0].rd_done);
@@ -227,7 +168,7 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		(!rd_done_th_assert)) {
 		cci_dev->cci_master_info[MASTER_1].status = 0;
 		rd_done_th_assert = true;
-		if (cci_dev->is_burst_read[MASTER_1])
+		if (cci_dev->is_burst_read)
 			complete(
 			&cci_dev->cci_master_info[MASTER_1].th_complete);
 		complete(&cci_dev->cci_master_info[MASTER_1].rd_done);
@@ -352,6 +293,64 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		cam_io_w_mb(CCI_M1_RESET_RMSK, base + CCI_RESET_CMD_ADDR);
 	}
 
+	cam_io_w_mb(irq_status0, base + CCI_IRQ_CLEAR_0_ADDR);
+
+	reg_bmsk = CCI_IRQ_MASK_1_RMSK;
+	if ((irq_status1 & CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD) &&
+	!(irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_DONE_BMSK)) {
+		reg_bmsk &= ~CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
+		spin_lock_irqsave(&cci_dev->lock_status, flags);
+		cci_dev->irqs_disabled |=
+			CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
+		spin_unlock_irqrestore(&cci_dev->lock_status, flags);
+	}
+
+	if ((irq_status1 & CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD) &&
+	!(irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_DONE_BMSK)) {
+		reg_bmsk &= ~CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
+		spin_lock_irqsave(&cci_dev->lock_status, flags);
+		cci_dev->irqs_disabled |=
+			CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
+		spin_unlock_irqrestore(&cci_dev->lock_status, flags);
+	}
+
+	if (reg_bmsk != CCI_IRQ_MASK_1_RMSK) {
+		cam_io_w_mb(reg_bmsk, base + CCI_IRQ_MASK_1_ADDR);
+		CAM_DBG(CAM_CCI, "Updating the reg mask for irq1: 0x%x",
+			reg_bmsk);
+	} else if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_DONE_BMSK ||
+		irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_DONE_BMSK) {
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M0_RD_DONE_BMSK) {
+			spin_lock_irqsave(&cci_dev->lock_status, flags);
+			if (cci_dev->irqs_disabled &
+				CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD) {
+				irq_update_rd_done |=
+					CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
+				cci_dev->irqs_disabled &=
+					~CCI_IRQ_STATUS_1_I2C_M0_RD_THRESHOLD;
+			}
+			spin_unlock_irqrestore(&cci_dev->lock_status, flags);
+		}
+		if (irq_status0 & CCI_IRQ_STATUS_0_I2C_M1_RD_DONE_BMSK) {
+			spin_lock_irqsave(&cci_dev->lock_status, flags);
+			if (cci_dev->irqs_disabled &
+				CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD) {
+				irq_update_rd_done |=
+					CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
+				cci_dev->irqs_disabled &=
+					~CCI_IRQ_STATUS_1_I2C_M1_RD_THRESHOLD;
+			}
+			spin_unlock_irqrestore(&cci_dev->lock_status, flags);
+		}
+	}
+
+	if (irq_update_rd_done != 0) {
+		irq_update_rd_done |= cam_io_r_mb(base + CCI_IRQ_MASK_1_ADDR);
+		cam_io_w_mb(irq_update_rd_done, base + CCI_IRQ_MASK_1_ADDR);
+	}
+
+	cam_io_w_mb(irq_status1, base + CCI_IRQ_CLEAR_1_ADDR);
+	cam_io_w_mb(0x1, base + CCI_IRQ_GLOBAL_CLEAR_CMD_ADDR);
 	return IRQ_HANDLED;
 }
 
