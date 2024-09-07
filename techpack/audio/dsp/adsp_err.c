@@ -8,10 +8,6 @@
 #include <linux/debugfs.h>
 #include <dsp/apr_audio-v2.h>
 
-#ifdef AUDIO_FORCE_RESTART_ADSP_TEMP
-#include <soc/qcom/subsystem_restart.h>
-#include <linux/version.h>
-#endif
 
 /* ERROR STRING */
 /* Success. The operation completed with no errors. */
@@ -129,57 +125,9 @@ static inline void adsp_err_check_panic(u32 adsp_error)
 static inline void adsp_err_check_panic(u32 adsp_error) {}
 #endif
 
-#ifdef AUDIO_FORCE_RESTART_ADSP_TEMP
-#define ADSP_ERR_LIMITED_COUNT		(15)
-#define ADSP_ERR_LIMITED_TIME		(1)
-static int err_count = 0;
-static long long err_total_count = 0;
-static __kernel_time_t last_time = 0;
-static void adsp_err_check_restart(u32 adsp_error)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
-	struct timespec64 curtime;
-#else
-	struct timeval curtime;
-#endif
-	pr_err("%s: DSP returned error adsp_err = 0x%x total = %lld\n", __func__, adsp_error, err_total_count);
-
-	if (adsp_error == ADSP_ENEEDMORE || adsp_error == ADSP_ENOMEMORY) {
-		err_count++;
-		err_total_count++;
-		pr_err("%s: DSP returned error ADSP_ENEEDMORE or ADSP_ENOMEMORY adsp_err=0x%x\n",
-			__func__, adsp_error);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
-		ktime_get_real_ts64(&curtime);
-#else
-		do_gettimeofday(&curtime);
-#endif
-		pr_err("%s: err_count = %d [%lld - %lld = %lld]\n", __func__,
-			err_count, curtime.tv_sec, last_time, curtime.tv_sec - last_time);
-
-		if ((err_count >= ADSP_ERR_LIMITED_COUNT) &&
-					(curtime.tv_sec - last_time <= ADSP_ERR_LIMITED_TIME)) {
-			err_count = 0;
-			pr_err("%s: DSP returned error more than limited, restart now !\n", __func__);
-			subsystem_restart("adsp");
-		}
-
-		last_time = curtime.tv_sec;
-
-		if (err_count >= ADSP_ERR_LIMITED_COUNT) {
-			pr_err("%s: DSP returned error more than limited and err_count to 0!\n", __func__);
-			err_count = 0;
-		}
-	}
-}
-#else
-static void adsp_err_check_restart(u32 adsp_error) {}
-#endif
-
 int adsp_err_get_lnx_err_code(u32 adsp_error)
 {
 	adsp_err_check_panic(adsp_error);
-	adsp_err_check_restart(adsp_error);
 
 	if (adsp_error > ADSP_ERR_MAX)
 		return adsp_err_code_info[ADSP_ERR_MAX].lnx_err_code;

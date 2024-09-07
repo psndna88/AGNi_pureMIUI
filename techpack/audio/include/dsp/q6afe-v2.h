@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 #ifndef __Q6AFE_V2_H__
 #define __Q6AFE_V2_H__
@@ -56,8 +55,8 @@
 /* for external mclk dynamic switch */
 #define AFE_API_VERSION_V8		8
 #define AFE_API_VERSION_V10		10
-#define AFE_SAMPLING_RATE_8KHZ 8000
 
+#define AFE_SAMPLING_RATE_8KHZ 8000
 
 /* the different modes for data*/
 #define BAP_UNICAST          1
@@ -693,7 +692,6 @@ int afe_get_spk_v_vali_flag(void);
 void afe_get_spk_v_vali_sts(int *spk_v_vali_sts);
 void afe_set_spk_initial_cal(int initial_cal);
 void afe_set_spk_v_vali_flag(int v_vali_flag);
-int afe_send_data(phys_addr_t buf_addr_p, u32 mem_map_handle, int bytes);
 struct afe_tdm_intf_paired_rx_cfg {
 	int afe_port_id;
 	union afe_port_group_config tdm_group; /* hold tdm group config */

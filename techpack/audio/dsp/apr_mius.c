@@ -38,10 +38,11 @@ struct driver_sensor_event {
 	};
 };
 
-
+#if defined(CONFIG_TARGET_PRODUCT_ODIN) || defined(CONFIG_TARGET_PRODUCT_VILI) || defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA)
 static int ups_event;
 #ifdef CONFIG_QGKI_SYSTEM
 extern int us_afe_callback(int data);
+#endif
 #endif
 
 static int afe_set_parameter(int port,
@@ -184,17 +185,21 @@ int32_t mi_ultrasound_apr_set_parameter(int32_t port_id, uint32_t param_id,
 	else
 		module_id = MIUS_ULTRASOUND_MODULE_RX;
 
+#if defined(CONFIG_TARGET_PRODUCT_ODIN) || defined(CONFIG_TARGET_PRODUCT_VILI) || defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA)
 	if(param_id == MIUS_ULTRASOUND_UPLOAD_NONE) {
 #ifdef CONFIG_QGKI_SYSTEM
 		ret = (int32_t)us_afe_callback((const uint32_t)ups_event);
+		pr_info("[MIUS]: %s force reprot event %d ret %d\n", __func__, ups_event, ret);
 #endif
 		return ret;
 	}
+#endif
 
 	ret = afe_set_parameter(port_id,
 		param_id, module_id,
 		(struct afe_mi_ultrasound_set_params_t *)user_params,
 		length);
+	pr_info("[MIUS]: %s param_id %x status %d\n", __func__, param_id, ret);
 
 	return ret;
 }
@@ -375,6 +380,15 @@ static int32_t process_sensorhub_msg(uint32_t *payload, uint32_t payload_size)
 
 #endif
 
+#if defined(CONFIG_TARGET_PRODUCT_ODIN) || defined(CONFIG_TARGET_PRODUCT_VILI) || defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA)
+#else
+#ifdef CONFIG_QGKI_SYSTEM
+extern int us_afe_callback(int data);
+#endif
+
+static int ups_event;
+#endif
+
 int32_t mius_process_apr_payload(uint32_t *payload)
 {
 	uint32_t payload_size = 0;
@@ -421,16 +435,16 @@ int32_t mius_process_apr_payload(uint32_t *payload)
 			printk(KERN_DEBUG "[MIUS] mi us payload[3] = %d", (int)payload[3]);
 			if (payload[3] == 0 || payload[3] == 1) {
 				ups_event = payload[3];
-#ifdef CONFIG_QGKI_SYSTEM
+			#ifdef CONFIG_QGKI_SYSTEM
 				ret = (int32_t)us_afe_callback((const uint32_t)payload[3]);
-#endif
+			#endif
 			} else {
 
 				ups_event = ups_event ^ 1;
 				printk(KERN_DEBUG "[MIUS] >> change ups to %d", ups_event);
-#ifdef CONFIG_QGKI_SYSTEM
+			#ifdef CONFIG_QGKI_SYSTEM
 				ret = (int32_t)us_afe_callback((uint32_t)ups_event);
-#endif
+			#endif
 			}
 
 			if (ret != 0) {

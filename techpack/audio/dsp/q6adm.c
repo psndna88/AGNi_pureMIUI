@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -53,12 +52,8 @@ enum adm_cal_status {
 	ADM_STATUS_MAX,
 };
 
-typedef int (*adm_cb)(uint32_t opcode, uint32_t token,
-		       uint32_t *pp_event_package, void *pvt);
-
 static bool is_usb_timeout;
 static bool close_usb;
-
 struct adm_copp {
 
 	atomic_t id[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
@@ -78,8 +73,6 @@ struct adm_copp {
 	uint32_t adm_delay[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	unsigned long adm_status[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	atomic_t token[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
-	adm_cb cb;
-	void *priv[AFE_MAX_PORTS][MAX_COPPS_PER_PORT][MAX_FE_ID];
 };
 
 struct source_tracking_data {
@@ -171,93 +164,6 @@ static int adm_arrange_mch_map_v8(
 		int path,
 		int channel_mode,
 		int port_idx);
-
-static uint32_t adm_pp_raise_event_opcode[] = {
-		ADM_PP_EVENT };
-
-int q6adm_send_event_register_cmd(int port_id, int copp_idx, u8 *data,
-					int param_size, int opcode)
-{
-	struct adm_register_event *adm_reg_params = NULL;
-	int ret = 0, port_idx = 0, sz = 0;
-
-	port_id = afe_convert_virtual_to_portid(port_id);
-	port_idx = adm_validate_and_get_port_index(port_id);
-	if (port_idx < 0) {
-		pr_err("%s: Invalid port_id %#x\n", __func__, port_id);
-		return -EINVAL;
-	}
-
-	sz = sizeof(struct apr_hdr) + param_size;
-	adm_reg_params = kzalloc(sz, GFP_KERNEL);
-
-	if (!adm_reg_params)
-		return -ENOMEM;
-
-	memcpy(adm_reg_params->payload, data, param_size);
-
-	adm_reg_params->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
-				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
-	adm_reg_params->hdr.src_svc = APR_SVC_ADM;
-	adm_reg_params->hdr.src_domain = APR_DOMAIN_APPS;
-	adm_reg_params->hdr.src_port = port_id;
-	adm_reg_params->hdr.dest_svc = APR_SVC_ADM;
-	adm_reg_params->hdr.dest_domain = APR_DOMAIN_ADSP;
-	adm_reg_params->hdr.dest_port =
-			atomic_read(&this_adm.copp.id[port_idx][copp_idx]);
-	adm_reg_params->hdr.token = port_idx << 16 | copp_idx;
-	adm_reg_params->hdr.opcode = opcode;
-	adm_reg_params->hdr.pkt_size = sz;
-
-	atomic_set(&this_adm.copp.stat[port_idx][copp_idx], 0);
-	ret = apr_send_pkt(this_adm.apr, (uint32_t *)adm_reg_params);
-	if (ret < 0) {
-		pr_err("%s: Set adm register params failed port %d rc %d\n",
-				__func__, port_id, ret);
-		ret = -EINVAL;
-		goto fail_cmd;
-	}
-
-	ret = wait_event_timeout(this_adm.copp.wait[port_idx][copp_idx],
-			atomic_read(
-			&this_adm.copp.stat[port_idx][copp_idx]) >= 0,
-			msecs_to_jiffies(TIMEOUT_MS));
-	if (!ret) {
-		pr_err("%s: set params timed out port = %d\n",
-			__func__, port_id);
-		ret = -ETIMEDOUT;
-		goto fail_cmd;
-	}
-	ret = 0;
-fail_cmd:
-	kfree(adm_reg_params);
-
-	return ret;
-}
-EXPORT_SYMBOL(q6adm_send_event_register_cmd);
-
-
-static int is_adsp_adm_raise_event(uint32_t cmd)
-{
-	int i = 0;
-	for (i = 0; i < ARRAY_SIZE(adm_pp_raise_event_opcode); i++) {
-		if (cmd == adm_pp_raise_event_opcode[i])
-			return i;
-	}
-	return -EINVAL;
-}
-
-void q6adm_register_callback(void *cb)
-{
-	this_adm.copp.cb = cb;
-}
-EXPORT_SYMBOL(q6adm_register_callback);
-
-void q6adm_clear_callback(void)
-{
-	this_adm.copp.cb = NULL;
-}
-EXPORT_SYMBOL(q6adm_clear_callback);
 
 /**
  * adm_validate_and_get_port_index -
@@ -389,7 +295,7 @@ static int adm_get_copp_id(int port_idx, int copp_idx)
 static int adm_get_idx_if_single_copp_exists(int port_idx,
 			int topology,
 			int rate, int bit_width,
-			uint32_t copp_token, int channel_mode)
+			uint32_t copp_token)
 {
 	int idx;
 
@@ -403,16 +309,14 @@ static int adm_get_idx_if_single_copp_exists(int port_idx,
 			(bit_width ==
 			atomic_read(&this_adm.copp.bit_width[port_idx][idx])) &&
 			(copp_token ==
-			atomic_read(&this_adm.copp.token[port_idx][idx])) &&
-			(channel_mode ==
-			atomic_read(&this_adm.copp.channels[port_idx][idx])))
+			atomic_read(&this_adm.copp.token[port_idx][idx])))
 			return idx;
 	return -EINVAL;
 }
 
 static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 				 int rate, int bit_width, int app_type,
-				 int session_type, uint32_t copp_token, int channel_mode)
+				 int session_type, uint32_t copp_token)
 {
 	int idx;
 
@@ -423,8 +327,7 @@ static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 		return adm_get_idx_if_single_copp_exists(port_idx,
 				topology,
 				rate, bit_width,
-				copp_token,
-				channel_mode);
+				copp_token);
 
 	for (idx = 0; idx < MAX_COPPS_PER_PORT; idx++)
 		if ((topology ==
@@ -437,9 +340,7 @@ static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 			atomic_read(
 				&this_adm.copp.session_type[port_idx][idx])) &&
 		    (app_type ==
-			atomic_read(&this_adm.copp.app_type[port_idx][idx])) &&
-			(channel_mode ==
-			atomic_read(&this_adm.copp.channels[port_idx][idx])))
+			atomic_read(&this_adm.copp.app_type[port_idx][idx])))
 			return idx;
 	return -EINVAL;
 }
@@ -1759,11 +1660,8 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 {
 	uint32_t *payload;
 	int port_idx, copp_idx, idx, client_id;
-	uint32_t num_modules;
+	int num_modules;
 	int ret;
-	int payload_size = 0, i = 0;
-	struct msm_adsp_event_data *pp_event_package = NULL;
-	struct adm_usr_info usr_data = {0};
 
 	if (data == NULL) {
 		pr_err("%s: data parameter is null\n", __func__);
@@ -1804,6 +1702,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
 			pr_debug("%s: APR_BASIC_RSP_RESULT id 0x%x\n",
 				__func__, payload[0]);
+
 			if (!((client_id != ADM_CLIENT_ID_SOURCE_TRACKING) &&
 			     ((payload[0] == ADM_CMD_SET_PP_PARAMS_V5) ||
 			      (payload[0] == ADM_CMD_SET_PP_PARAMS_V6)))) {
@@ -1934,13 +1833,6 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 					pr_err("%s: ADM get topo list error = %d\n",
 					       __func__, payload[1]);
 				break;
-			case ADM_CMD_REGISTER_EVENT:
-				pr_debug("%s:ADM_CMD_REGISTER_EVENT\n",
-					 __func__);
-				if (payload[1] != 0)
-					pr_err("%s: ADM_CMD_REGISTER_EVENT error = %d\n",
-					       __func__, payload[1]);
-				break;
 			default:
 				pr_err("%s: Unknown Cmd: 0x%x\n", __func__,
 								payload[0]);
@@ -2059,63 +1951,6 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 				   *payload);
 			atomic_set(&this_adm.adm_stat, 0);
 			wake_up(&this_adm.adm_wait);
-			break;
-		case ADM_PP_EVENT:
-			if (data->payload_size < (2 * sizeof(uint32_t))) {
-				pr_err("%s: payload has invalid size %d\n",
-					__func__, data->payload_size);
-				return -EINVAL;
-			}
-
-			pr_debug("%s: ADM_PP_EVENT payload[0][0x%x] payload[1][0x%x]\n",
-					 __func__, payload[0], payload[1]);
-
-			ret = is_adsp_adm_raise_event(data->opcode);
-
-			if (ret < 0)
-				return 0;
-
-			/*
-			 *  repack payload for adm_copp_pp_event
-			 *  package is composed of event type + size + payload
-			 */
-			payload_size = data->payload_size;
-			pp_event_package = kzalloc(payload_size
-					+ sizeof(struct msm_adsp_event_data)
-					, GFP_ATOMIC);
-
-			if (!pp_event_package)
-				return -ENOMEM;
-
-			pp_event_package->event_type = ret
-							+ ADSP_ADM_SERVICE_ID;
-			usr_data.service_id = ADSP_ADM_SERVICE_ID;
-			usr_data.token_coppidx = data->token;
-
-			pp_event_package->payload_len = data->payload_size +
-						sizeof(struct adm_usr_info);
-
-			memcpy((void *)pp_event_package->payload, &(usr_data),
-					sizeof(struct adm_usr_info));
-
-			memcpy((void *)pp_event_package->payload +
-					sizeof(struct adm_usr_info),
-					data->payload, data->payload_size);
-			if (this_adm.copp.cb) {
-				for (i = 0; i < MAX_FE_ID; i++) {
-					if (this_adm.copp.priv[port_idx]
-							[copp_idx][i]) {
-						pr_debug("%s: calling adm callback for feid %d port_idx %d copp_idx %d\n",
-								__func__, i, port_idx, copp_idx);
-						this_adm.copp.cb(data->opcode,
-						data->token,
-						(void *)pp_event_package,
-						this_adm.copp.priv[port_idx]
-						[copp_idx][i]);
-					}
-				}
-			}
-			kfree(pp_event_package);
 			break;
 		default:
 			pr_err("%s: Unknown cmd:0x%x\n", __func__,
@@ -3319,33 +3154,6 @@ static int adm_arrange_mch_ep2_map_v8(
 	return rc;
 }
 
-int q6adm_update_rtd_info(void *rtd, int port_id,
-		int copp_idx, int fe_id, int enable)
-{
-	int port_idx = 0;
-
-	port_id = q6audio_convert_virtual_to_portid(port_id);
-	port_idx = adm_validate_and_get_port_index(port_id);
-
-	if (port_idx < 0) {
-		pr_err("%s: Invalid port_id 0x%x\n", __func__, port_id);
-		return -EINVAL;
-	}
-
-	pr_debug("%s: port_id %#x copp_idx %d fe_id %d enable %d\n",
-			__func__, port_id, copp_idx, fe_id, enable);
-
-	if (enable) {
-		this_adm.copp.priv[port_idx][copp_idx][fe_id] = rtd;
-	}
-	else {
-		this_adm.copp.priv[port_idx][copp_idx][fe_id] = NULL;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL(q6adm_update_rtd_info);
-
 static int adm_copp_set_ec_ref_mfc_cfg_v2(int port_id, int copp_idx,
 					int sample_rate, int bps,
 					struct msm_pcm_channel_mixer *cfg)
@@ -3685,8 +3493,7 @@ int adm_open_v2(int port_id, int path, int rate, int channel_mode, int topology,
 						      perf_mode,
 						      rate, bit_width,
 						      app_type, session_type,
-						      copp_token,
-						      channel_mode);
+						      copp_token);
 
 	if (copp_idx < 0) {
 		copp_idx = adm_get_next_available_copp(port_idx);
@@ -4119,7 +3926,6 @@ static void route_set_opcode_matrix_id(
 			break;
 		}
 		/* fall through to set matrix id for non-listen case */
-                /* fallthrough */
 	case ADM_PATH_NONLIVE_REC:
 		route->hdr.opcode = ADM_CMD_MATRIX_MAP_ROUTINGS_V5;
 		route->matrix_id = ADM_MATRIX_ID_AUDIO_TX;
@@ -6198,101 +6004,6 @@ done:
 	return ret;
 }
 EXPORT_SYMBOL(adm_get_source_tracking);
-
-/**
- * adm_get_fnn_source_tracking -
- *        Retrieve sound track info
- *
- * @port_id: Port ID number
- * @copp_idx: copp index assigned
- * @FnnSourceTrackingData: pointer for source track data to be updated with
- *
- * Returns 0 on success or error on failure
- */
-int adm_get_fnn_source_tracking(int port_id, int copp_idx,
-			struct fluence_nn_source_tracking_param *FnnSourceTrackingData)
-{
-	int ret = 0, i;
-	char *params_value;
-	uint32_t max_param_size = 0;
-	struct adm_param_fluence_nn_source_tracking_t *fnn_sourcetrack_params = NULL;
-	struct param_hdr_v3 param_hdr;
-
-	pr_debug("%s: Enter, port_id %d, copp_idx %d\n",
-		  __func__, port_id, copp_idx);
-
-	max_param_size = sizeof(struct adm_param_fluence_nn_source_tracking_t) +
-			 sizeof(union param_hdrs);
-	params_value = kzalloc(max_param_size, GFP_KERNEL);
-	if (!params_value)
-		return -ENOMEM;
-
-	memset(&param_hdr, 0, sizeof(param_hdr));
-	param_hdr.module_id = MODULE_ID_FLUENCE_NN;
-	param_hdr.instance_id = INSTANCE_ID_0;
-	param_hdr.param_id = AUDPROC_PARAM_ID_FLUENCE_NN_SOURCE_TRACKING;
-	param_hdr.param_size = max_param_size;
-	ret = adm_get_pp_params(port_id, copp_idx,
-				ADM_CLIENT_ID_SOURCE_TRACKING, NULL, &param_hdr,
-				params_value);
-	if (ret) {
-		pr_err("%s: get parameters failed ret:%d\n", __func__, ret);
-		ret = -EINVAL;
-		goto done;
-	}
-
-	if (this_adm.sourceTrackingData.apr_cmd_status != 0) {
-		pr_err("%s - get params returned error [%s]\n",
-			__func__, adsp_err_get_err_str(
-			this_adm.sourceTrackingData.apr_cmd_status));
-		ret = adsp_err_get_lnx_err_code(
-				this_adm.sourceTrackingData.apr_cmd_status);
-		goto done;
-	}
-
-	fnn_sourcetrack_params = (struct adm_param_fluence_nn_source_tracking_t *) params_value;
-	if ((!FnnSourceTrackingData) || (!fnn_sourcetrack_params)) {
-		pr_err("%s: Caught NULL pointer \n", __func__);
-		ret = -EINVAL;
-		goto done;
-	}
-
-	FnnSourceTrackingData->speech_probablity_q20 =
-		fnn_sourcetrack_params->speech_probablity_q20;
-	pr_debug("%s: speech_probablity_q20 = %d\n",
-			__func__, FnnSourceTrackingData->speech_probablity_q20);
-
-	for (i = 0; i < MAX_TOP_SPEAKERS; i++) {
-		FnnSourceTrackingData->speakers[i] =
-			fnn_sourcetrack_params->speakers[i];
-		pr_debug("%s: speakers[%d] = %d\n",
-			__func__, i, FnnSourceTrackingData->speakers[i]);
-	}
-
-	for (i = 0; i < MAX_POLAR_ACTIVITY_INDICATORS; i++) {
-		FnnSourceTrackingData->polarActivity[i] =
-			fnn_sourcetrack_params->polarActivity[i];
-		pr_debug("%s: polarActivity[%d] = %d\n",
-		 __func__, i, FnnSourceTrackingData->polarActivity[i]);
-	}
-
-	FnnSourceTrackingData->session_time_lsw =
-			fnn_sourcetrack_params->session_time_lsw;
-	pr_debug("%s: session_time_lsw = %x\n",
-		  __func__, FnnSourceTrackingData->session_time_lsw);
-
-	FnnSourceTrackingData->session_time_msw =
-			fnn_sourcetrack_params->session_time_msw;
-	pr_debug("%s: session_time_msw = %x\n",
-		  __func__, FnnSourceTrackingData->session_time_msw);
-
-done:
-	pr_debug("%s: Exit, ret = %d\n", __func__, ret);
-
-	kfree(params_value);
-	return ret;
-}
-EXPORT_SYMBOL(adm_get_fnn_source_tracking);
 
 /**
  * adm_get_doa_tracking_mon -

@@ -2,7 +2,6 @@
  * cs35l41.c -- CS35l41 ALSA SoC audio driver
  *
  * Copyright 2018 Cirrus Logic, Inc.
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * Author:	David Rhodes	<david.rhodes@cirrus.com>
  *		Brian Austin	<brian.austin@cirrus.com>
@@ -150,6 +149,8 @@ static int cs35l41_dsp_power_ev(struct snd_soc_dapm_widget *w,
 	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
 	struct cs35l41_private *cs35l41 = snd_soc_component_get_drvdata(component);
 
+	dev_info(cs35l41->dev, "%s: event = %d\n", __func__, event);
+
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		if (cs35l41->halo_booted == false)
@@ -173,6 +174,8 @@ static int cs35l41_dsp_load_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
 	struct cs35l41_private *cs35l41 = snd_soc_component_get_drvdata(component);
+
+	dev_info(cs35l41->dev, "%s: event = %d\n",__func__, event);
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
@@ -286,7 +289,7 @@ static int cs35l41_do_fast_switch(struct cs35l41_private *cs35l41)
 	data_ctl_buf	= NULL;
 
 	fw_name	= cs35l41->fast_switch_names[cs35l41->fast_switch_file_idx];
-	dev_dbg(cs35l41->dev, "fw_name:%s\n", fw_name);
+	dev_info(cs35l41->dev, "fw_name:%s\n", fw_name);
 	ret	= request_firmware(&fw, fw_name, cs35l41->dev);
 	if (ret < 0) {
 		dev_err(cs35l41->dev, "Failed to request firmware:%s\n",
@@ -1027,6 +1030,7 @@ static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 	bool pdn;
 	unsigned int val;
 	pr_debug("++++>CSPL: %s, event = %d, DC counter = %d.\n", __func__, event, cs35l41->dc_current_cnt);
+	dev_warn(cs35l41->dev, "%s: event = %d\n", __func__, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
 		regmap_multi_reg_write_bypassed(cs35l41->regmap,
@@ -1402,14 +1406,9 @@ static int cs35l41_is_speaker_in_handset(struct snd_pcm_substream *substream,
         RCV_DAI_NAME = "cs35l41.1-0040";
         HANDSET_TUNING = "rcv_voice_delta.txt";
 #endif
-//#if defined(CONFIG_TARGET_PRODUCT_VILI)
+#if defined(CONFIG_TARGET_PRODUCT_VILI)
         SPK_DAI_NAME = "cs35l41.1-0041";
         RCV_DAI_NAME = "cs35l41.1-0040";
-        HANDSET_TUNING = "rcv_voice_delta.txt";
-//#endif
-#if defined(CONFIG_TARGET_PRODUCT_VENUS)
-        SPK_DAI_NAME = "cs35l41.1-0040";
-        RCV_DAI_NAME = "cs35l41.1-0042";
         HANDSET_TUNING = "rcv_voice_delta.txt";
 #endif
         /* modify dai name and handset tuning for mars */
@@ -1431,6 +1430,9 @@ static int cs35l41_is_speaker_in_handset(struct snd_pcm_substream *substream,
 	/* Check the tuning on RCV amp */
 	cs35l41 = snd_soc_component_get_drvdata(rcv_dai->component);
 	fw_name = cs35l41->fast_switch_names[cs35l41->fast_switch_file_idx];
+
+        dev_info(cs35l41->dev,"cs35l41_is_speaker_in_handset() SPK_DAI_NAME %s RCV_DAI_NAME %s HANDSET_TUNING %s fw_name %s",
+						SPK_DAI_NAME, RCV_DAI_NAME, HANDSET_TUNING, fw_name);
 
 	if (!strcmp(fw_name, HANDSET_TUNING)) {
 		dev_info(cs35l41->dev, "%s: '%s'[%d] = '%s'\n",
@@ -1767,6 +1769,7 @@ static int cs35l41_dai_set_sysclk(struct snd_soc_dai *dai,
 
 static int  cs35l41_digital_mute(struct snd_soc_dai *dai, int mute)
 {
+
 	struct cs35l41_private *cs35l41 =
 				  snd_soc_component_get_drvdata(dai->component);
 
@@ -2038,12 +2041,12 @@ static int cs35l41_component_probe(struct snd_soc_component *component)
 		snd_soc_dapm_ignore_suspend(dapm, "TEMP");
 		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Preloader");
 		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Preload");
-#if defined(CONFIG_TARGET_PRODUCT_STAR)
+		#if defined(CONFIG_TARGET_PRODUCT_STAR)
 		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005305);
-#endif
-#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
+		#endif
+		#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
 		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
-#endif
+		#endif
 	} else {
 		snd_soc_dapm_ignore_suspend(dapm, "RCV AMP Playback");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV AMP Capture");
@@ -2056,13 +2059,13 @@ static int cs35l41_component_probe(struct snd_soc_component *component)
 		snd_soc_dapm_ignore_suspend(dapm, "RCV TEMP");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV DSP1 Preloader");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV DSP1 Preload");
-#if defined(CONFIG_TARGET_PRODUCT_STAR)
+		#if defined(CONFIG_TARGET_PRODUCT_STAR)
 		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005306);
-#endif
-#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
+		#endif
+		#if defined(CONFIG_TARGET_PRODUCT_HAYDN)
 		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
 		regmap_write(cs35l41->regmap, CS35L41_DAC_MSM_CFG, 0x00200000);
-#endif
+		#endif
 	}
 /* Add run-time mixer control for fast use case switch */
 	kcontrol = kzalloc(sizeof(*kcontrol), GFP_KERNEL);
@@ -2227,9 +2230,10 @@ static int cs35l41_handle_of_data(struct device *dev,
 		 * device tree do not provide file name.
 		 * Use default value
 		 */
+
 		num_fast_switch		= ARRAY_SIZE(cs35l41_fast_switch_text);
 		cs35l41->fast_switch_enum.items	=
-			ARRAY_SIZE(cs35l41_fast_switch_text);
+					ARRAY_SIZE(cs35l41_fast_switch_text);
 		cs35l41->fast_switch_enum.texts	= cs35l41_fast_switch_text;
 		cs35l41->fast_switch_names = cs35l41_fast_switch_text;
 	} else {

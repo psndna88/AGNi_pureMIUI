@@ -18,9 +18,6 @@ endif
 ifeq ($(TARGET_SUPPORT), qrb5165)
 KBUILD_OPTIONS += CONFIG_ARCH_KONA=y
 endif
-ifeq ($(TARGET_SUPPORT), qcs6490)
-KBUILD_OPTIONS += CONFIG_ARCH_LAHAINA=y
-endif
 
 subdir-ccflags-y += -I$(AUDIO_ROOT)/include/uapi/
 
@@ -49,13 +46,6 @@ ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qrb5165))
 obj-y += asoc/codecs/bolero/
 obj-y += asoc/codecs/wcd938x/
 obj-y += asoc/codecs/wsa883x/
-KBUILD_CFLAGS += -Wno-error
-endif
-ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qcs6490))
-obj-m += asoc/codecs/bolero/
-obj-m += asoc/codecs/wcd937x/
-obj-m += asoc/codecs/wcd938x/
-obj-m += asoc/codecs/wsa883x/
 KBUILD_CFLAGS += -Wno-error
 endif
 ifeq ($(TARGET_SUPPORT), sdmsteppe)
@@ -92,7 +82,6 @@ obj-y += soc/
 KBUILD_OPTIONS += CONFIG_SND_SOC_AUTO=y
 KBUILD_OPTIONS += CONFIG_SND_SOC_AR=y
 endif
-
 all:
 	$(shell rm -fr $(shell pwd)/soc/core.h)
 	$(shell ln -s $(KERNEL_SRC)/drivers/pinctrl/core.h $(shell pwd)/soc/core.h)

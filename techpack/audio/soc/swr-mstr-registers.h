@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2015, 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _SWRM_REGISTERS_H
@@ -126,7 +125,6 @@
 #endif /* CONFIG_SWRM_VER_1P1 */
 
 #define SWRM_INTERRUPT_STATUS_EXT_CLK_STOP_WAKEUP            0x10000
-#define SWRM_INTERRUPT_STATUS_DOUT_RATE_MISMATCH             0x20000
 
 #define SWRM_COMP_PARAMS_WR_FIFO_DEPTH		0x00007C00
 #define SWRM_COMP_PARAMS_RD_FIFO_DEPTH		0x000F8000

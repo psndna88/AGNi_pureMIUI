@@ -103,10 +103,6 @@ static int afe_loopback_tx_port_id = -1;
 static struct msm_pcm_channel_mixer ec_ref_chmix_cfg[MSM_FRONTEND_DAI_MAX];
 static struct msm_ec_ref_port_cfg ec_ref_port_cfg;
 
-static uint32_t adm_pp_reg_event_opcode[] = {
-        ADM_CMD_REGISTER_EVENT
-};
-
 #define WEIGHT_0_DB 0x4000
 /* all the FEs which can support channel mixer */
 static struct msm_pcm_channel_mixer channel_mixer[MSM_FRONTEND_DAI_MM_SIZE];
@@ -1818,7 +1814,6 @@ static int msm_routing_find_topology_on_index(int fedai_id, int session_type, in
 	if (cal_block != NULL) {
 		topology = ((struct audio_cal_info_adm_top *)
 			    cal_block->cal_info)->topology;
-		cal_utils_mark_cal_used(cal_block);
 	}
 	mutex_unlock(&cal_data[idx]->lock);
 	return topology;
@@ -2361,7 +2356,6 @@ static int msm_pcm_routing_channel_mixer(int fe_id, bool perf_mode,
  * msm_pcm_routing_set_channel_mixer_runtime - apply channel mixer
  * setting during runtime.
  *
- * @fe_id: frontend index
  * @be_id: backend index
  * @session_id: session index
  * @session_type: session type
@@ -2369,13 +2363,12 @@ static int msm_pcm_routing_channel_mixer(int fe_id, bool perf_mode,
  *
  * Retuen: 0 for success, else error
  */
-int msm_pcm_routing_set_channel_mixer_runtime(int fe_id, int be_id, int session_id,
+int msm_pcm_routing_set_channel_mixer_runtime(int be_id, int session_id,
 			int session_type,
 			struct msm_pcm_channel_mixer *params)
 {
 	int rc = 0;
 	int port_id, copp_idx = 0;
-	bool tmp = false;
 
 	be_id--;
 	if (be_id < 0 || be_id >= MSM_BACKEND_DAI_MAX) {
@@ -2384,13 +2377,8 @@ int msm_pcm_routing_set_channel_mixer_runtime(int fe_id, int be_id, int session_
 		return -EINVAL;
 	}
 
-	tmp =  msm_pcm_routing_get_portid_copp_idx(fe_id, session_type, &port_id, &copp_idx);
-		
-	if(!tmp){
-		pr_err("%s: Could not find copp_idx for fe_id: %d, will use default copp_idx\n",
-			__func__, fe_id);
-		copp_idx = adm_get_default_copp_idx(port_id);
-	}
+	port_id = msm_bedais[be_id].port_id;
+	copp_idx = adm_get_default_copp_idx(port_id);
 	pr_debug("%s: port_id - %d, copp_idx %d session id - %d\n",
 		 __func__, port_id, copp_idx, session_id);
 
@@ -2429,56 +2417,6 @@ int msm_pcm_routing_set_channel_mixer_runtime(int fe_id, int be_id, int session_
 	return rc;
 }
 EXPORT_SYMBOL(msm_pcm_routing_set_channel_mixer_runtime);
-
-/*
- * msm_pcm_routing_get_portid_copp_idx:
- *	update the port_id and copp_idx for a given
- *	fe_id
- *
- * @fe_id: front end id
- * @session_type: indicates session is of type TX or RX
- * port: port_id to be updated as output
- * copp_idx: copp_idx is updated as output
- * @stream_type: indicates either Audio or Listen stream type
- */
-bool msm_pcm_routing_get_portid_copp_idx(int fe_id,
-				int session_type, int *port, int *copp_idx)
-{
-	int idx = 0;
-	bool found = false;
-	int be_index = 0, port_id = 0;
-
-	pr_debug("%s:fe_id[%d] sess_type [%d]\n",
-		 __func__, fe_id, session_type);
-	if (!is_mm_lsm_fe_id(fe_id)) {
-		/* bad ID assigned in machine driver */
-		pr_err("%s: bad MM ID %d\n", __func__, fe_id);
-		return -EINVAL;
-	}
-
-	for (be_index = 0; be_index < MSM_BACKEND_DAI_MAX; be_index++) {
-		port_id = msm_bedais[be_index].port_id;
-		if (!msm_bedais[be_index].active ||
-		    !test_bit(fe_id, &msm_bedais[be_index].fe_sessions[0]))
-			continue;
-
-		for (idx = 0; idx < MAX_COPPS_PER_PORT; idx++) {
-			unsigned long copp_id =
-				session_copp_map[fe_id][session_type][be_index];
-			if (test_bit(idx, &copp_id)) {
-				pr_debug("%s: port_id: %d, copp_idx:%d\n",
-				       __func__, port_id, idx);
-				*port = port_id;
-				*copp_idx = idx;
-				found = true;
-				break;
-			}
-		}
-	}
-
-	return found;
-}
-EXPORT_SYMBOL(msm_pcm_routing_get_portid_copp_idx);
 
 int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 					int dspst_id, int stream_type)
@@ -25281,7 +25219,7 @@ static const struct snd_kcontrol_new app_type_cfg_controls[] = {
 	0x7FFFFFFF, 0, 128, msm_routing_get_app_type_cfg_control,
 	msm_routing_put_app_type_cfg_control),
 	SOC_SINGLE_MULTI_EXT("App Type Gain", SND_SOC_NOPM, 0,
-	0x7FFFFFFF, 0, 4, NULL, msm_routing_put_app_type_gain_control)
+	0x2000, 0, 4, NULL, msm_routing_put_app_type_gain_control)
 };
 
 static int msm_routing_put_module_cfg_control(struct snd_kcontrol *kcontrol,
@@ -27448,12 +27386,11 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia6 Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"MultiMedia6 Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"MultiMedia6 Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"MultiMedia6 Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"MultiMedia6 Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"MultiMedia6 Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"MultiMedia6 Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
+
 	{"MultiMedia8 Mixer", "AFE_LOOPBACK_TX", "AFE_LOOPBACK_TX"},
 	{"MultiMedia9 Mixer", "AFE_LOOPBACK_TX", "AFE_LOOPBACK_TX"},
 
@@ -27491,48 +27428,41 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia18 Mixer", "QUAT_TDM_TX_1", "QUAT_TDM_TX_1"},
 	{"MultiMedia18 Mixer", "QUAT_TDM_TX_2", "QUAT_TDM_TX_2"},
 	{"MultiMedia18 Mixer", "QUAT_TDM_TX_3", "QUAT_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"MultiMedia18 Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"MultiMedia18 Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"MultiMedia18 Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"MultiMedia18 Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
+
 
 	{"MultiMedia19 Mixer", "AFE_LOOPBACK_TX", "AFE_LOOPBACK_TX"},
 	{"MultiMedia19 Mixer", "QUAT_TDM_TX_0", "QUAT_TDM_TX_0"},
 	{"MultiMedia19 Mixer", "QUAT_TDM_TX_1", "QUAT_TDM_TX_1"},
 	{"MultiMedia19 Mixer", "QUAT_TDM_TX_2", "QUAT_TDM_TX_2"},
 	{"MultiMedia19 Mixer", "QUAT_TDM_TX_3", "QUAT_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"MultiMedia19 Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"MultiMedia19 Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"MultiMedia19 Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"MultiMedia19 Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 
 	{"MultiMedia28 Mixer", "AFE_LOOPBACK_TX", "AFE_LOOPBACK_TX"},
 	{"MultiMedia28 Mixer", "QUAT_TDM_TX_0", "QUAT_TDM_TX_0"},
 	{"MultiMedia28 Mixer", "QUAT_TDM_TX_1", "QUAT_TDM_TX_1"},
 	{"MultiMedia28 Mixer", "QUAT_TDM_TX_2", "QUAT_TDM_TX_2"},
 	{"MultiMedia28 Mixer", "QUAT_TDM_TX_3", "QUAT_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"MultiMedia28 Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"MultiMedia28 Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"MultiMedia28 Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"MultiMedia28 Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 
 	{"MultiMedia29 Mixer", "AFE_LOOPBACK_TX", "AFE_LOOPBACK_TX"},
 	{"MultiMedia29 Mixer", "QUAT_TDM_TX_0", "QUAT_TDM_TX_0"},
 	{"MultiMedia29 Mixer", "QUAT_TDM_TX_1", "QUAT_TDM_TX_1"},
 	{"MultiMedia29 Mixer", "QUAT_TDM_TX_2", "QUAT_TDM_TX_2"},
 	{"MultiMedia29 Mixer", "QUAT_TDM_TX_3", "QUAT_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"MultiMedia29 Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"MultiMedia29 Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"MultiMedia29 Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"MultiMedia29 Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 
 	{"INTERNAL_BT_SCO_RX Audio Mixer", "MultiMedia1", "MM_DL1"},
 	{"INTERNAL_BT_SCO_RX Audio Mixer", "MultiMedia2", "MM_DL2"},
@@ -28840,12 +28770,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"PRI_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"PRI_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"PRI_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"PRI_TDM_RX_0 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"PRI_TDM_RX_0 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"PRI_TDM_RX_0 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"PRI_TDM_RX_0 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"PRI_TDM_RX_0", NULL, "PRI_TDM_RX_0 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -28871,12 +28799,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"PRI_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"PRI_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"PRI_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"PRI_TDM_RX_1 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"PRI_TDM_RX_1 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"PRI_TDM_RX_1 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"PRI_TDM_RX_1 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"PRI_TDM_RX_1", NULL, "PRI_TDM_RX_1 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -28902,12 +28828,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"PRI_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"PRI_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"PRI_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"PRI_TDM_RX_2 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"PRI_TDM_RX_2 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"PRI_TDM_RX_2 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"PRI_TDM_RX_2 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"PRI_TDM_RX_2", NULL, "PRI_TDM_RX_2 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -28933,12 +28857,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"PRI_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"PRI_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"PRI_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"PRI_TDM_RX_3 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"PRI_TDM_RX_3 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"PRI_TDM_RX_3 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"PRI_TDM_RX_3 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"PRI_TDM_RX_3", NULL, "PRI_TDM_RX_3 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -28964,12 +28886,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"SEC_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"SEC_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"SEC_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"SEC_TDM_RX_0 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"SEC_TDM_RX_0 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"SEC_TDM_RX_0 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"SEC_TDM_RX_0 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"SEC_TDM_RX_0", NULL, "SEC_TDM_RX_0 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -28995,12 +28915,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"SEC_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"SEC_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"SEC_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"SEC_TDM_RX_1 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"SEC_TDM_RX_1 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"SEC_TDM_RX_1 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"SEC_TDM_RX_1 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"SEC_TDM_RX_1", NULL, "SEC_TDM_RX_1 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29026,12 +28944,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"SEC_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"SEC_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"SEC_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"SEC_TDM_RX_2 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"SEC_TDM_RX_2 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"SEC_TDM_RX_2 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"SEC_TDM_RX_2 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"SEC_TDM_RX_2", NULL, "SEC_TDM_RX_2 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29057,12 +28973,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"SEC_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"SEC_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"SEC_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"SEC_TDM_RX_3 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"SEC_TDM_RX_3 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"SEC_TDM_RX_3 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"SEC_TDM_RX_3 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"SEC_TDM_RX_3", NULL, "SEC_TDM_RX_3 Port Mixer"},
 
 	{"SEC_TDM_RX_7 Port Mixer", "TERT_TDM_TX_7", "TERT_TDM_TX_7"},
@@ -29091,12 +29005,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"TERT_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"TERT_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"TERT_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"TERT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"TERT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"TERT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"TERT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"TERT_TDM_RX_0", NULL, "TERT_TDM_RX_0 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29122,12 +29034,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"TERT_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"TERT_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"TERT_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"TERT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"TERT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"TERT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"TERT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"TERT_TDM_RX_1", NULL, "TERT_TDM_RX_1 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29153,12 +29063,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"TERT_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"TERT_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"TERT_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"TERT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"TERT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"TERT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"TERT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"TERT_TDM_RX_2", NULL, "TERT_TDM_RX_2 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29184,12 +29092,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"TERT_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"TERT_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"TERT_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"TERT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"TERT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"TERT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"TERT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"TERT_TDM_RX_3", NULL, "TERT_TDM_RX_3 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29215,12 +29121,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUAT_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUAT_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUAT_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUAT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUAT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUAT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUAT_TDM_RX_0 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUAT_TDM_RX_0", NULL, "QUAT_TDM_RX_0 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29246,12 +29150,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUAT_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUAT_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUAT_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUAT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUAT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUAT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUAT_TDM_RX_1 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUAT_TDM_RX_1", NULL, "QUAT_TDM_RX_1 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29277,12 +29179,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUAT_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUAT_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUAT_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUAT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUAT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUAT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUAT_TDM_RX_2 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUAT_TDM_RX_2", NULL, "QUAT_TDM_RX_2 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29308,12 +29208,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUAT_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUAT_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUAT_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUAT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUAT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUAT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUAT_TDM_RX_3 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUAT_TDM_RX_3", NULL, "QUAT_TDM_RX_3 Port Mixer"},
 
 	{"QUAT_TDM_RX_7 Port Mixer", "TERT_TDM_TX_7", "TERT_TDM_TX_7"},
@@ -29344,12 +29242,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUIN_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUIN_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUIN_TDM_RX_0 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUIN_TDM_RX_0 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUIN_TDM_RX_0 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUIN_TDM_RX_0 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUIN_TDM_RX_0 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUIN_TDM_RX_0", NULL, "QUIN_TDM_RX_0 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29375,12 +29271,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUIN_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUIN_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUIN_TDM_RX_1 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUIN_TDM_RX_1 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUIN_TDM_RX_1 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUIN_TDM_RX_1 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUIN_TDM_RX_1 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUIN_TDM_RX_1", NULL, "QUIN_TDM_RX_1 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29406,12 +29300,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUIN_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUIN_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUIN_TDM_RX_2 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUIN_TDM_RX_2 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUIN_TDM_RX_2 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUIN_TDM_RX_2 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUIN_TDM_RX_2 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUIN_TDM_RX_2", NULL, "QUIN_TDM_RX_2 Port Mixer"},
 
 #ifndef CONFIG_MI2S_DISABLE
@@ -29437,12 +29329,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"QUIN_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_1", "QUIN_TDM_TX_1"},
 	{"QUIN_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_2", "QUIN_TDM_TX_2"},
 	{"QUIN_TDM_RX_3 Port Mixer", "QUIN_TDM_TX_3", "QUIN_TDM_TX_3"},
-#ifndef CONFIG_SEN_TDM_DISABLE
 	{"QUIN_TDM_RX_3 Port Mixer", "SEN_TDM_TX_0", "SEN_TDM_TX_0"},
 	{"QUIN_TDM_RX_3 Port Mixer", "SEN_TDM_TX_1", "SEN_TDM_TX_1"},
 	{"QUIN_TDM_RX_3 Port Mixer", "SEN_TDM_TX_2", "SEN_TDM_TX_2"},
 	{"QUIN_TDM_RX_3 Port Mixer", "SEN_TDM_TX_3", "SEN_TDM_TX_3"},
-#endif
 	{"QUIN_TDM_RX_3", NULL, "QUIN_TDM_RX_3 Port Mixer"},
 
 	{"QUIN_TDM_RX_7 Port Mixer", "TERT_TDM_TX_7", "TERT_TDM_TX_7"},
@@ -32394,9 +32284,6 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 				(fdai->passthr_mode == LEGACY_PCM))
 				msm_pcm_routing_cfg_pp(port_id, copp_idx,
 						       topology, channels);
-			if(msm_pcm_routing_channel_mixer(i, fdai->perf_mode,fdai->strm_id, session_type)){
-				pr_err("%s: failed to send channel mixer \n", __func__);
-			}
 		}
 	}
 
@@ -32593,273 +32480,6 @@ static void msm_routing_unload_topology(uint32_t topology_id)
 				 __func__, topology_id);
 
 }
-
-static int msm_audio_get_copp_idx_from_port_id(int port_id, int session_type,
-					 int *copp_idx)
-{
-	int i = 0, idx = 0, be_idx = 0;
-	int ret = 0;
-	unsigned long copp = 0;
-
-	pr_debug("%s: Enter, port_id=%d\n", __func__, port_id);
-
-	ret = q6audio_validate_port(port_id);
-	if (ret < 0) {
-		pr_err("%s: port validation failed id 0x%x ret %d\n",
-			__func__, port_id, ret);
-
-		ret = -EINVAL;
-		goto done;
-	}
-
-	for (be_idx = 0; be_idx < MSM_BACKEND_DAI_MAX; be_idx++) {
-		if (msm_bedais[be_idx].port_id == port_id)
-			break;
-	}
-	if (be_idx >= MSM_BACKEND_DAI_MAX) {
-		pr_err("%s: Invalid be id %d\n", __func__, be_idx);
-
-		ret = -EINVAL;
-		goto done;
-	}
-
-	for_each_set_bit(i, &msm_bedais[be_idx].fe_sessions[0],
-			 MSM_FRONTEND_DAI_MAX) {
-		if (!(is_mm_lsm_fe_id(i) &&
-				route_check_fe_id_adm_support(i)))
-			continue;
-
-		for (idx = 0; idx < MAX_COPPS_PER_PORT; idx++) {
-			copp = session_copp_map[i]
-				[session_type][be_idx];
-			if (test_bit(idx, &copp))
-				break;
-		}
-		if (idx >= MAX_COPPS_PER_PORT)
-			continue;
-		else
-			break;
-	}
-	if (i >= MSM_FRONTEND_DAI_MAX) {
-		pr_err("%s: Invalid FE, exiting\n", __func__);
-
-		ret = -EINVAL;
-		goto done;
-	}
-	*copp_idx = idx;
-	pr_debug("%s: copp_idx=%d\n", __func__, *copp_idx);
-
-done:
-	return ret;
-}
-
-static int msm_routing_put_copp_dtmf_module_enable
-		(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-	uint8_t *be_id = NULL, be_id_val = 0;
-	int copp_idx = -1, port_id = 0;
-	struct param_hdr_v3 param_hdr = {0};
-	int rc = 0;
-	u32 flag = (bool)ucontrol->value.integer.value[0];
-
-	be_id = (uint8_t *)ucontrol->value.bytes.data;
-	be_id_val = *be_id;
-
-	if((be_id_val < 0) || (be_id_val >= MSM_BACKEND_DAI_MAX)) {
-		pr_err("%s: received invalid be_id %lu\n", __func__, be_id_val);
-		return -EINVAL;
-	}
-
-	port_id = msm_bedais[be_id_val].port_id;
-	rc = msm_audio_get_copp_idx_from_port_id(port_id, SESSION_TYPE_RX,
-					    &copp_idx);
-
-	if (rc) {
-		pr_err(" %s:failure in getting copp_idx\n", __func__);
-		return rc;
-	}
-
-	memset(&param_hdr, 0, sizeof(param_hdr));
-	param_hdr.module_id = AUDPROC_MODULE_ID_DTMF_DETECTION;
-	param_hdr.instance_id = INSTANCE_ID_0;
-	param_hdr.param_id = AUDPROC_PARAM_ID_ENABLE;
-	param_hdr.param_size = 4;
-
-	rc = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr,
-					   (u8 *)&flag);
-	if (rc)
-		pr_err("%s: Failed to set adm_pack_and_set_one_pp_param, err %d\n",
-					__func__, rc);
-
-	return rc;
-
-}
-
-static const struct snd_kcontrol_new copp_dtmf_detect_enable_mixer_controls[] = {
-	SOC_SINGLE_EXT("MultiMedia1 COPP DTMF Detect Enable", SND_SOC_NOPM,
-	MSM_FRONTEND_DAI_MULTIMEDIA1, 1, 0, NULL,
-	msm_routing_put_copp_dtmf_module_enable),
-	SOC_SINGLE_EXT("MultiMedia6 COPP DTMF Detect Enable", SND_SOC_NOPM,
-	MSM_FRONTEND_DAI_MULTIMEDIA6, 1, 0, NULL,
-	msm_routing_put_copp_dtmf_module_enable),
-	SOC_SINGLE_EXT("MultiMedia21 COPP DTMF Detect Enable", SND_SOC_NOPM,
-	MSM_FRONTEND_DAI_MULTIMEDIA21, 1, 0, NULL,
-	msm_routing_put_copp_dtmf_module_enable),
-};
-
-static int adsp_copp_event_handler(uint32_t opcode,
-		uint32_t token_adm, uint32_t *payload, void *priv)
-{
-	struct snd_soc_pcm_runtime *rtd = priv;
-	int ret = 0;
-
-	if (!rtd) {
-		pr_err("%s: rtd is NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	ret = msm_adsp_copp_inform_mixer_ctl(rtd, payload);
-	if (ret) {
-		pr_err("%s: failed to inform mixer ctrl. err = %d\n",
-			__func__, ret);
-		return -EINVAL;
-	}
-
-	return ret;
-}
-
-static int msm_routing_get_copp_callback_event(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	uint32_t payload_size = 0;
-	struct dsp_adm_callback_list *oldest_event = NULL;
-	unsigned long spin_flags = 0;
-	struct dsp_adm_callback_prtd *kctl_prtd = NULL;
-	int ret = 0;
-
-	kctl_prtd = (struct dsp_adm_callback_prtd *)
-				kcontrol->private_data;
-
-	if (kctl_prtd == NULL) {
-		pr_err("%s: ADM PP event queue is not initialized.\n",
-				__func__);
-		ret = -EINVAL;
-		goto done;
-	}
-
-	spin_lock_irqsave(&kctl_prtd->prtd_spin_lock, spin_flags);
-	pr_debug("%s: %d events in queue.\n", __func__, kctl_prtd->event_count);
-	if (list_empty(&kctl_prtd->event_queue)) {
-		pr_err("%s: ADM PP event queue is empty.\n", __func__);
-		ret = -EINVAL;
-		spin_unlock_irqrestore(&kctl_prtd->prtd_spin_lock, spin_flags);
-		goto done;
-	}
-
-	oldest_event = list_first_entry(&kctl_prtd->event_queue,
-					struct dsp_adm_callback_list, list);
-	list_del(&oldest_event->list);
-	kctl_prtd->event_count--;
-	spin_unlock_irqrestore(&kctl_prtd->prtd_spin_lock, spin_flags);
-
-	payload_size = oldest_event->event.payload_len;
-	pr_debug("%s: event fetched: type %d length %d\n",
-				__func__, oldest_event->event.event_type,
-				oldest_event->event.payload_len);
-	memcpy(ucontrol->value.bytes.data, &oldest_event->event,
-			sizeof(struct msm_adsp_event_data) + payload_size);
-	kfree(oldest_event);
-
-done:
-	return ret;
-}
-
-static int msm_routing_put_copp_callback_event(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	pr_debug("%s\n", __func__);
-	return 0;
-}
-
-static int msm_copp_callback_event_info(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_info *uinfo)
-{
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
-	uinfo->count =
-		sizeof(((struct snd_ctl_elem_value *)0)->value.bytes.data);
-
-	return 0;
-}
-
-static const struct snd_kcontrol_new copp_callback_event_controls[] = {
-	{
-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
-		.iface  = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name   = "ADSP COPP Callback Event",
-		.info   = msm_copp_callback_event_info,
-		.get    = msm_routing_get_copp_callback_event,
-		.put    = msm_routing_put_copp_callback_event,
-	},
-};
-
-int msm_copp_event_info(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_info *uinfo)
-{
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
-	uinfo->count =
-		sizeof(((struct snd_ctl_elem_value *)0)->value.bytes.data);
-
-	return 0;
-}
-
-static int msm_routing_get_copp_event_cmd(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	pr_debug("%s\n", __func__);
-	return 0;
-}
-
-static int msm_routing_put_copp_event_cmd(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	struct msm_adm_event_data *ev = NULL;
-	int be_id = 0, ret = 0, param_size = 0, opcode = 0;
-	int copp_idx = -1, port_id = 0;
-
-	ev = (struct msm_adm_event_data *)ucontrol->value.bytes.data;
-	param_size = ev->payload_length - sizeof(struct module_info_data);
-	opcode = adm_pp_reg_event_opcode[(ev->event_type)
-						- ADSP_ADM_SERVICE_ID];
-	be_id = ev->mod_info.be_id;
-	port_id = msm_bedais[be_id].port_id;
-
-	pr_debug("%s: port_id= 0x%x, be_id=%d\n", __func__,port_id, be_id);
-
-	ret = msm_audio_get_copp_idx_from_port_id(port_id, SESSION_TYPE_RX,
-					    &copp_idx);
-
-	if (ret) {
-		pr_debug("%s:failure in getting copp_idx\n", __func__);
-		return ret;
-	}
-
-	q6adm_register_callback(&adsp_copp_event_handler);
-	q6adm_send_event_register_cmd(port_id, copp_idx, (u8 *) (ev->payload),
-					param_size, opcode);
-	return ret;
-}
-
-static const struct snd_kcontrol_new copp_event_controls[] = {
-	{
-		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
-		.iface  = SNDRV_CTL_ELEM_IFACE_MIXER,
-		.name   = "COPP Event Cmd",
-		.info   = msm_copp_event_info,
-		.get    = msm_routing_get_copp_event_cmd,
-		.put    = msm_routing_put_copp_event_cmd,
-	},
-};
 
 static int msm_routing_put_device_pp_params_mixer(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
@@ -34041,7 +33661,6 @@ static void snd_soc_dapm_add_routes_aux_pcm(struct snd_soc_component *component)
 /* Not used but frame seems to require it */
 static int msm_routing_probe(struct snd_soc_component *component)
 {
-	struct snd_kcontrol *kctl = NULL;
 	snd_soc_dapm_new_controls(&component->dapm, msm_qdsp6_widgets,
 			   ARRAY_SIZE(msm_qdsp6_widgets));
 
@@ -34099,27 +33718,10 @@ static int msm_routing_probe(struct snd_soc_component *component)
 				      ARRAY_SIZE(asrc_config_controls));
 	snd_soc_add_component_controls(component, asrc_start_controls,
 					ARRAY_SIZE(asrc_start_controls));
-	snd_soc_add_component_controls(component,
-			copp_dtmf_detect_enable_mixer_controls,
-			ARRAY_SIZE(copp_dtmf_detect_enable_mixer_controls));
-
 #ifdef CONFIG_MSM_INTERNAL_MCLK
 	snd_soc_add_component_controls(component, internal_mclk_control,
 				      ARRAY_SIZE(internal_mclk_control));
 #endif
-	snd_soc_add_component_controls(component, copp_callback_event_controls,
-				  ARRAY_SIZE(copp_callback_event_controls));
-	snd_soc_add_component_controls(component, copp_event_controls,
-				  ARRAY_SIZE(copp_event_controls));
-
-	kctl = snd_soc_card_get_kcontrol(component->dapm.card,
-				"ADSP COPP Callback Event");
-	if (!kctl) {
-		pr_err("%s: failed to get kctl %s.\n", __func__,
-				"ADSP COPP Callback Event");
-		return -EINVAL;
-	}
-	kctl->private_data = NULL;
 	return 0;
 }
 
