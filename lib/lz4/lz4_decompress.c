@@ -51,7 +51,12 @@
 #endif
 
 #ifndef LZ4_FAST_DEC_LOOP
-#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+#if defined(__i386__) || defined(__x86_64__)
+#define LZ4_FAST_DEC_LOOP 1
+#elif defined(__aarch64__) && !defined(__clang__)
+     /* On aarch64, we disable this optimization for clang because on certain
+      * mobile chipsets and clang, it reduces performance. For more information
+      * refer to https://github.com/lz4/lz4/pull/707. */
 #define LZ4_FAST_DEC_LOOP 1
 #else
 #define LZ4_FAST_DEC_LOOP 0
@@ -327,7 +332,7 @@ static FORCE_INLINE int LZ4_decompress_generic(
 			}
 
 			/* Fastpath check: Avoids a branch in LZ4_wildCopy32 if true */
-			if ((match >= lowPrefix)) {
+			if (!(dict == usingExtDict) || (match >= lowPrefix)) {
 				if (offset >= 8) {
 					memcpy(op, match, 8);
 					memcpy(op + 8, match + 8, 8);
@@ -336,6 +341,45 @@ static FORCE_INLINE int LZ4_decompress_generic(
 					continue;
 				}
 			}
+		}
+
+		/* match starting within external dictionary */
+		if ((dict == usingExtDict) && (match < lowPrefix)) {
+			if (unlikely(op + length > oend - LASTLITERALS)) {
+				if (partialDecoding) {
+					/* reach end of buffer */
+					length =
+					    min(length, (size_t) (oend - op));
+				} else {
+					/* end-of-block condition violated */
+					goto _output_error;
+				}
+			}
+
+			if (length <= (size_t) (lowPrefix - match)) {
+				/* match fits entirely within external dictionary : just copy */
+				memmove(op, dictEnd - (lowPrefix - match),
+					length);
+				op += length;
+			} else {
+				/* match stretches into both external dict and current block */
+				size_t const copySize =
+				    (size_t) (lowPrefix - match);
+				size_t const restSize = length - copySize;
+				memcpy(op, dictEnd - copySize, copySize);
+				op += copySize;
+				if (restSize > (size_t) (op - lowPrefix)) {	/* overlap copy */
+					BYTE *const endOfMatch = op + restSize;
+					const BYTE *copyFrom = lowPrefix;
+					while (op < endOfMatch) {
+						*op++ = *copyFrom++;
+					}
+				} else {
+					memcpy(op, lowPrefix, restSize);
+					op += restSize;
+				}
+			}
+			continue;
 		}
 
 		/* copy match within block */
@@ -354,7 +398,6 @@ static FORCE_INLINE int LZ4_decompress_generic(
 #endif
 	/* Main Loop : decode sequences */
 	while (1) {
-		token = *ip++;
 		length = token >> ML_BITS;
 
 		/* ip < iend before the increment */
@@ -380,7 +423,7 @@ static FORCE_INLINE int LZ4_decompress_generic(
 		    && likely((endOnInput ? ip < shortiend : 1) &
 			      (op <= shortoend))) {
 			/* Copy the literals */
-			LZ4_memcpy(op, ip, endOnInput ? 16 : 8);
+			memcpy(op, ip, endOnInput ? 16 : 8);
 			op += length;
 			ip += length;
 
@@ -400,9 +443,9 @@ static FORCE_INLINE int LZ4_decompress_generic(
 			    (offset >= 8) &&
 			    (dict == withPrefix64k || match >= lowPrefix)) {
 				/* Copy the match. */
-				LZ4_memcpy(op + 0, match + 0, 8);
-				LZ4_memcpy(op + 8, match + 8, 8);
-				LZ4_memcpy(op + 16, match + 16, 2);
+				memcpy(op + 0, match + 0, 8);
+				memcpy(op + 8, match + 8, 8);
+				memcpy(op + 16, match + 16, 2);
 				op += length + MINMATCH;
 				/* Both stages worked, load the next token. */
 				continue;
@@ -575,7 +618,7 @@ safe_match_copy:
 				size_t const copySize = (size_t)(lowPrefix - match);
 				size_t const restSize = length - copySize;
 
-				LZ4_memcpy(op, dictEnd - copySize, copySize);
+				memcpy(op, dictEnd - copySize, copySize);
 				op += copySize;
 				if (restSize > (size_t)(op - lowPrefix)) {
 					/* overlap copy */
@@ -585,7 +628,7 @@ safe_match_copy:
 					while (op < endOfMatch)
 						*op++ = *copyFrom++;
 				} else {
-					LZ4_memcpy(op, lowPrefix, restSize);
+					memcpy(op, lowPrefix, restSize);
 					op += restSize;
 				}
 			}
@@ -611,7 +654,7 @@ safe_match_copy:
 				while (op < copyEnd)
 					*op++ = *match++;
 			} else {
-				LZ4_memcpy(op, match, mlen);
+				memcpy(op, match, mlen);
 			}
 			op = copyEnd;
 			if (op == oend)
@@ -625,7 +668,7 @@ safe_match_copy:
 			op[2] = match[2];
 			op[3] = match[3];
 			match += inc32table[offset];
-			LZ4_memcpy(op + 4, match, 4);
+			memcpy(op + 4, match, 4);
 			match -= dec64table[offset];
 		} else {
 			LZ4_copy8(op, match);
@@ -702,7 +745,7 @@ int LZ4_decompress_fast(const char *source, char *dest, int originalSize)
 
 /* ===== Instantiate a few more decoding cases, used more than once. ===== */
 
-static int LZ4_decompress_safe_withPrefix64k(const char *source, char *dest,
+int LZ4_decompress_safe_withPrefix64k(const char *source, char *dest,
 				      int compressedSize, int maxOutputSize)
 {
 	return LZ4_decompress_generic(source, dest,
@@ -724,9 +767,9 @@ static int LZ4_decompress_safe_withSmallPrefix(const char *source, char *dest,
 				      (BYTE *)dest - prefixSize, NULL, 0);
 }
 
-static int LZ4_decompress_safe_forceExtDict(const char *source, char *dest,
-					    int compressedSize, int maxOutputSize,
-					    const void *dictStart, size_t dictSize)
+int LZ4_decompress_safe_forceExtDict(const char *source, char *dest,
+				     int compressedSize, int maxOutputSize,
+				     const void *dictStart, size_t dictSize)
 {
 	return LZ4_decompress_generic(source, dest,
 				      compressedSize, maxOutputSize,
