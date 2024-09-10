@@ -1587,7 +1587,7 @@ static int msm_venc_update_bitrate(struct msm_vidc_inst *inst)
 
 int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 {
-	int rc = 0;
+	int rc = 0, hevc_tier_value = 0;
 	struct msm_vidc_mastering_display_colour_sei_payload *mdisp_sei = NULL;
 	struct msm_vidc_content_light_level_sei_payload *cll_sei = NULL;
 	u32 i_qp_min, i_qp_max, p_qp_min, p_qp_max, b_qp_min, b_qp_max;
@@ -1816,7 +1816,13 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-		inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid);
+		if ((inst->level & 0xf0000000) && get_v4l2_codec(inst) == V4L2_PIX_FMT_HEVC) {
+			hevc_tier_value = (inst->level & 0xf0000000);
+			inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid) | hevc_tier_value;
+		}
+		else {
+			inst->level = msm_comm_v4l2_to_hfi(ctrl->id, ctrl->val, sid);
+		}
 		break;
 	case V4L2_CID_MPEG_VIDEO_HEVC_TIER:
 		inst->level |=

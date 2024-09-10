@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/mutex.h>
 #include <linux/wait.h>
@@ -898,6 +899,7 @@ int q6usm_enc_cfg_blk(struct us_client *usc, struct us_encdec_cfg *us_cfg)
 	       sizeof(struct usm_cfg_common));
 
 	/* Transparent data copy */
+	memset(enc_cfg->enc_blk.transp_data, 0, sizeof (enc_cfg->enc_blk.transp_data));
 	memcpy(enc_cfg->enc_blk.transp_data, us_cfg->params,
 	       us_cfg->params_size);
 	pr_debug("%s: cfg_size[%d], params_size[%d]\n",

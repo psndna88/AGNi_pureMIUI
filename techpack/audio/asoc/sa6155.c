@@ -143,6 +143,8 @@ static const char *const tdm_gpio_phandle[] = {"qcom,pri-tdm-gpios",
 
 static const char *const mclk_gpio_phandle[] = { "qcom,internal-mclk2-gpios" };
 
+static bool mclk_enable_status = false;
+
 enum {
 	TDM_0 = 0,
 	TDM_1,
@@ -4253,7 +4255,7 @@ static int msm_pinctrl_init(struct platform_device *pdev, enum pinctrl_mode mode
 				ret = -EIO;
 				goto err;
 			}
-
+			mclk_enable_status = true;
 			ret = pinctrl_select_state(pinctrl_info->pinctrl, pinctrl_info->active);
 			if (ret != 0) {
 				pr_err("%s: set pin state to active failed with %d\n",
@@ -7567,12 +7569,25 @@ static int sa6155_ssr_enable(struct device *dev, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	int ret = 0;
+	int ret = 0, i;
 
 	if (!card) {
 		dev_err(dev, "%s: card is NULL\n", __func__);
 		ret = -EINVAL;
 		goto err;
+	}
+
+	if (mclk_enable_status == true) {
+		for (i = 0; i < MCLK_MAX; i++) {
+			ret = afe_set_lpass_clock_v2(AFE_PORT_ID_TDM_PORT_RANGE_START,
+			&internal_mclk[i]);
+			if (ret < 0) {
+				pr_err("%s: afe lpass clock failed to enable clock, err:%d\n",
+					__func__, ret);
+				ret = -EIO;
+				goto err;
+			}
+		}
 	}
 
 	dev_info(dev, "%s: setting snd_card to ONLINE\n", __func__);

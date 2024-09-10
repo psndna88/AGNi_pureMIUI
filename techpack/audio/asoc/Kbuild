@@ -15,11 +15,13 @@ endif
 
 ifeq ($(CONFIG_SND_SOC_AUTO), y)
 	ifdef CONFIG_SND_SOC_SA8155
+		CDEFINES += -DCONFIG_SEN_TDM_DISABLE
 		include $(AUDIO_ROOT)/config/sa8155auto.conf
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
 	endif
 	ifdef CONFIG_SND_SOC_SA6155
+		CDEFINES += -DCONFIG_SEN_TDM_DISABLE
 		include $(AUDIO_ROOT)/config/sa6155auto.conf
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/sa6155autoconf.h
@@ -71,6 +73,11 @@ else
 		ifeq ($(CONFIG_ARCH_KONA), y)
 			include $(AUDIO_ROOT)/config/konaauto.conf
 			INCS    +=  -include $(AUDIO_ROOT)/config/konaautoconf.h
+		endif
+		ifeq ($(CONFIG_ARCH_LAHAINA), y)
+			include $(AUDIO_ROOT)/config/lahainaauto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/lahainaautoconf.h
 		endif
 		ifeq ($(CONFIG_ARCH_LITO), y)
 			include $(AUDIO_ROOT)/config/litoauto.conf
@@ -336,5 +343,5 @@ machine_dlkm-y := $(MACHINE_OBJS)
 obj-$(CONFIG_SND_SOC_CPE) += cpe_lsm_dlkm.o
 cpe_lsm_dlkm-y := $(CPE_LSM_OBJS)
 
-obj-$(CONFIG_SND_SOC_GVM_AUTO_SPF) += spf_machine_dlkm.o
-spf_machine_dlkm-y := $(SPF_MACHINE_OBJS)
+obj-$(CONFIG_SND_SOC_GVM_AUTO_SPF) += gvm_spf_machine_dlkm.o
+gvm_spf_machine_dlkm-y := $(SPF_MACHINE_OBJS)

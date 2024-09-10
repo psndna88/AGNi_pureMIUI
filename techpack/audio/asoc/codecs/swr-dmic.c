@@ -534,6 +534,7 @@ static int swr_dmic_probe(struct swr_device *pdev)
 	const char *swr_dmic_codec_name_of = NULL;
 	struct snd_soc_component *component = NULL;
 	int num_retry = NUM_ATTEMPTS;
+	size_t name_len = strlen(swr_dmic_name_prefix_of);
 
 	swr_dmic = devm_kzalloc(&pdev->dev, sizeof(struct swr_dmic_priv),
 			    GFP_KERNEL);
@@ -681,8 +682,7 @@ static int swr_dmic_probe(struct swr_device *pdev)
 		ret = -ENOMEM;
 		goto dev_err;
 	}
-	strlcpy(prefix_name, swr_dmic_name_prefix_of,
-			strlen(swr_dmic_name_prefix_of) + 1);
+	strlcpy(prefix_name, swr_dmic_name_prefix_of, name_len + 1);
 	component->name_prefix = prefix_name;
 
 	return 0;

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 
@@ -1983,6 +1984,7 @@ static int msm_compr_playback_open(struct snd_compr_stream *cstream)
 	atomic_set(&prtd->start, 0);
 	atomic_set(&prtd->drain, 0);
 #if !IS_ENABLED(CONFIG_AUDIO_QGKI)
+	snd_compr_use_pause_in_draining(cstream);
 	atomic_set(&prtd->partial_drain, 0);
 #endif
 	atomic_set(&prtd->xrun, 0);
@@ -2950,7 +2952,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		}
 #else
 		if ((prtd->bytes_received > prtd->copied_total) &&
-			(prtd->bytes_received < runtime->fragment_size)) {
+			((prtd->bytes_received - prtd->copied_total) < runtime->fragment_size)) {
 			pr_debug("%s: send the only partial buffer to dsp\n",
 					__func__);
 			bytes_to_write = prtd->bytes_received
@@ -4141,7 +4143,7 @@ static int msm_compr_channel_map_put(struct snd_kcontrol *kcontrol,
 
 	pr_debug("%s: fe_id- %llu\n", __func__, fe_id);
 
-	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s Received out of bounds fe_id %llu\n",
 			__func__, fe_id);
 		rc = -EINVAL;
@@ -4183,7 +4185,7 @@ static int msm_compr_channel_map_get(struct snd_kcontrol *kcontrol,
 	int rc = 0, i;
 
 	pr_debug("%s: fe_id- %llu\n", __func__, fe_id);
-	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s: Received out of bounds fe_id %llu\n",
 			__func__, fe_id);
 		rc = -EINVAL;
@@ -5184,8 +5186,13 @@ static int msm_compr_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		if (prtd && prtd->audio_client) {
 			stream_id = prtd->audio_client->session;
 			be_id = chmixer_pspd->port_idx;
+#ifdef CONFIG_PLATFORM_AUTO
+			msm_pcm_routing_set_channel_mixer_runtime(fe_id, be_id,
+					stream_id, session_type, chmixer_pspd);
+#else
 			msm_pcm_routing_set_channel_mixer_runtime(be_id,
 					stream_id, session_type, chmixer_pspd);
+#endif
 		}
 	}
 

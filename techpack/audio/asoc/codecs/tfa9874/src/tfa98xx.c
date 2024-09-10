@@ -71,6 +71,7 @@ static struct kmem_cache *tfa98xx_cache = NULL;  /* Memory pool used for DSP mes
 static DEFINE_MUTEX(tfa98xx_mutex);
 static LIST_HEAD(tfa98xx_device_list);
 static int tfa98xx_device_count = 0;
+static int  mute_cmd_already_sent = 0;
 static int tfa98xx_sync_count = 0;
 static LIST_HEAD(profile_list);        /* list of user selectable profiles */
 static int tfa98xx_mixer_profiles = 0; /* number of user selectable profiles */
@@ -80,6 +81,12 @@ static TfaContainer_t *tfa98xx_container = NULL;
 
 static int tfa98xx_kmsg_regs = 0;
 static int tfa98xx_ftrace_regs = 0;
+
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
+static char *fw_name = "tfa98xx.cnt";
+module_param(fw_name, charp, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(fw_name, "TFA98xx DSP firmware (container file) name.");
+#endif
 
 static int trace_level = 0;
 module_param(trace_level, int, S_IRUGO);
@@ -2562,17 +2569,12 @@ static void tfa98xx_container_loaded(const struct firmware *cont, void *context)
 
 static int tfa98xx_load_container(struct tfa98xx *tfa98xx)
 {
-#if 0
 	const struct firmware *firmware;
 	int rc = 0;
-#endif
 
 	tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_PENDING;
-
-#if 0
 	mutex_lock(&tfa98xx_mutex);
-	//rc = request_firmware(&firmware, fw_name, tfa98xx->dev);///////////////
-	rc = request_firmware_nowait(THIS_MODULE,&firmware, fw_name, tfa98xx->dev);///////////////
+	rc = request_firmware(&firmware, fw_name, tfa98xx->dev);
 	if (rc <0) {
 		mutex_unlock(&tfa98xx_mutex);
 		return rc;
@@ -2580,15 +2582,8 @@ static int tfa98xx_load_container(struct tfa98xx *tfa98xx)
 	tfa98xx_container_loaded(firmware, tfa98xx);
 	release_firmware(firmware);
 	mutex_unlock(&tfa98xx_mutex);
-#endif
-
-	return request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-	                               fw_name, tfa98xx->dev, GFP_KERNEL,
-	                               tfa98xx, tfa98xx_container_loaded);
-
-#if 0
+  
 	return rc;
-#endif
 }
 
 
@@ -3134,7 +3129,6 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 	struct tfa98xx *tfa98xx = snd_soc_codec_get_drvdata(codec);
 #endif
 	dev_info(&tfa98xx->i2c->dev, "%s: state: %d\n", __func__, mute);
-
 	if (no_start) {
 		pr_debug("no_start parameter set no tfa_dev_start or tfa_dev_stop, returning\n");
 		return 0;
@@ -3172,20 +3166,67 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 			return 0;
 		mutex_lock(&tfa98xx->dsp_lock);
 #ifdef TFA_NON_DSP_SOLUTION
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
+		if (strcmp (tfa_cont_profile_name (tfa98xx, tfa98xx_mixer_profile), "handset") != 0
+				&& !(strstr(tfaContProfileName(tfa98xx->tfa->cnt, tfa98xx->tfa->dev_idx, tfa98xx_mixer_profile), ".standby") != NULL)) {
+			if (2 == tfa98xx_device_count) {
+				pr_debug("[goodix] %s mute_cmd_already_sent=%d\n", __func__, mute_cmd_already_sent);
+				if (0 == mute_cmd_already_sent) {
+					tfa98xx_send_mute_cmd(TFA_KCONTROL_VALUE_ENABLED);
+					msleep(60);
+					mute_cmd_already_sent = 1;
+				} else {
+					pr_debug("[goodix] %s !!!cmd already sent, just clear flag\n", __func__);
+					mute_cmd_already_sent = 0;
+				}
+			}else{
+				tfa98xx_send_mute_cmd(TFA_KCONTROL_VALUE_ENABLED);
+				msleep(60);
+			}
+		}
+#else
 		tfa98xx_send_mute_cmd(TFA_KCONTROL_VALUE_ENABLED);
 		msleep(60);
 #endif
+#endif
 		tfa_dev_stop(tfa98xx->tfa);
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
+		if (stream == SNDRV_PCM_STREAM_PLAYBACK){
+			if(gpio_is_valid(tfa98xx->spk_sw_gpio)){
+				gpio_direction_output(tfa98xx->spk_sw_gpio,0);
+			}
+		}
+#endif
 		tfa98xx->dsp_init = TFA98XX_DSP_INIT_STOPPED;
 		mutex_unlock(&tfa98xx->dsp_lock);
-		if(tfa98xx->flags & TFA98XX_FLAG_ADAPT_NOISE_MODE)
-			cancel_delayed_work_sync(&tfa98xx->nmodeupdate_work);
+        if(tfa98xx->flags & TFA98XX_FLAG_ADAPT_NOISE_MODE)
+        	cancel_delayed_work_sync(&tfa98xx->nmodeupdate_work);
 	}
 	else {
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			tfa98xx->pstream = 1;
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
+			if(strcmp (tfa_cont_profile_name (tfa98xx, tfa98xx_mixer_profile), "handset")== 0){
+				if(gpio_is_valid(tfa98xx->spk_sw_gpio)){
+					gpio_direction_output(tfa98xx->spk_sw_gpio,1);
+				}
+			}
+			else{
+				if(gpio_is_valid(tfa98xx->spk_sw_gpio)){
+					gpio_direction_output(tfa98xx->spk_sw_gpio,0);
+				}
+			}
+#endif
 #ifdef TFA_NON_DSP_SOLUTION
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
+			if (tfa98xx->tfa->is_probus_device
+					&& (strcmp (tfa_cont_profile_name (tfa98xx, tfa98xx_mixer_profile), "handset") != 0)
+					&& !(strstr(tfaContProfileName(tfa98xx->tfa->cnt, tfa98xx->tfa->dev_idx, tfa98xx_mixer_profile), ".standby") != NULL)) {
+				tfa98xx_adsp_send_calib_values();
+			}
+else
 			tfa98xx_adsp_send_calib_values();
+#endif
 #endif
 		} else {
 			tfa98xx->cstream = 1;
