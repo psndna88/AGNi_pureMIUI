@@ -72,7 +72,6 @@ struct cs35l41_private {
 	bool fast_switch_en;
 	/* GPIO for /RST */
 	struct gpio_desc *reset_gpio;
-	struct gpio_desc *spk_sw_gpio;
 	//int reset_gpio;
 	/* Run-time mixer */
 	unsigned int fast_switch_file_idx;

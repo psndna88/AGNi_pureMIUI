@@ -4440,7 +4440,7 @@ static int wm_halo_apply_calibration(struct snd_soc_dapm_widget *w)
 				wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection cd CAL_STATUS", dsp->cal_status);
 				wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection cd CAL_CHECKSUM", dsp->cal_chksum);
 				//hold time = 0x96
-				//wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
+				wm_adsp_k_ctl_put(dsp, "RCV DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
 				wm_adsp_k_ctl_get(dsp, "RCV DSP1X Protection cd CAL_R");
 				wm_adsp_k_ctl_get(dsp, "RCV DSP1X Protection cd CAL_STATUS");
 				wm_adsp_k_ctl_get(dsp, "RCV DSP1X Protection cd CAL_CHECKSUM");
@@ -4454,7 +4454,7 @@ static int wm_halo_apply_calibration(struct snd_soc_dapm_widget *w)
 				wm_adsp_k_ctl_put(dsp, "DSP1X Protection cd CAL_STATUS", dsp->cal_status);
 				wm_adsp_k_ctl_put(dsp, "DSP1X Protection cd CAL_CHECKSUM", dsp->cal_chksum);
 				//hold time = 0x96
-				//wm_adsp_k_ctl_put(dsp, "DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
+				wm_adsp_k_ctl_put(dsp, "DSP1X Protection 400a4 OFFSET_HOLD_TIME", 150);
 				wm_adsp_k_ctl_get(dsp, "DSP1X Protection cd CAL_R");
 				wm_adsp_k_ctl_get(dsp, "DSP1X Protection cd CAL_STATUS");
 				wm_adsp_k_ctl_get(dsp, "DSP1X Protection cd CAL_CHECKSUM");

@@ -366,17 +366,6 @@ static int cs35l41_do_fast_switch(struct cs35l41_private *cs35l41)
 		}
 	}
 
-	/* Verify if there is no active CSPL commands */
-	wm_adsp_read_ctl(&cs35l41->dsp, "CSPL_COMMAND", &cmd_ctl, sizeof(s32));
-	if (be32_to_cpu(cmd_ctl) != CSPL_CMD_NONE) {
-		dev_err(cs35l41->dev, "CSPL_COMMAND = %d)\n",
-			be32_to_cpu(cmd_ctl));
-		usleep_range(100, 110);
-		cmd_ctl = cpu_to_be32(CSPL_CMD_NONE);
-		wm_adsp_write_ctl(&cs35l41->dsp, "CSPL_COMMAND",
-				   &cmd_ctl, sizeof(s32));
-	}
-
 	wm_adsp_write_ctl(&cs35l41->dsp, "CSPL_UPDATE_PARAMS_CONFIG",
 			  data_ctl_buf, data_ctl_len * sizeof(s32));
 
@@ -447,12 +436,6 @@ static int cs35l41_fast_switch_file_put(struct snd_kcontrol *kcontrol,
 		dev_err(cs35l41->dev, "Invalid mixer input (%u)\n", i);
 		return -EINVAL;
 	}
-
-	i = i % (soc_enum->items/2);
-	if (soc_enum->shift_l == 1) {
-		i = i + soc_enum->items/2;
-	}
-
 	if ((i != cs35l41->fast_switch_file_idx) && cs35l41->fast_switch_en) {
 		cs35l41->fast_switch_file_idx = i;
 		ret = cs35l41_do_fast_switch(cs35l41);
@@ -710,9 +693,6 @@ static const struct snd_kcontrol_new cs35l41_aud_controls[] = {
 			 0, 7, 0),
 	SOC_SINGLE("Boost Class-H Tracking Enable", CS35L41_BSTCVRT_VCTRL2, 0, 1, 0),
 	SOC_SINGLE("Boost Target Voltage", CS35L41_BSTCVRT_VCTRL1, 0, 0xAA, 0),
-	SOC_SINGLE("Noise Gate", CS35L41_NG_CFG, 0, 0x3FFF, 0),
-	//Convert hex to int, eg. 0x2005309 --> 33575689, tinymix 'VPBR Config' 33575689
-	SOC_SINGLE("VPBR Config", CS35L41_VPBR_CFG, 0, 0x7FFFFFF, 0),
 	SOC_SINGLE("AMP Enable", CS35L41_PWR_CTRL2, 0, 1, 0),
 	SOC_ENUM("PCM Soft Ramp", pcm_sft_ramp),
 	SOC_SINGLE_EXT("DSP Booted", SND_SOC_NOPM, 0, 1, 0,
@@ -1013,10 +993,6 @@ static const struct reg_sequence cs35l41_pdn_patch[] = {
 	{0x00000040, 0x00000033},
 };
 
-static const struct reg_sequence cs35l41_dsp_recovery_patch[] = {
-	{0x02800258, 0x00000000},
-	{0x0280025c, 0x00000000},
-};
 
 static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
@@ -1062,12 +1038,8 @@ static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 				break;
 			default:
 				dev_err(cs35l41->dev,
-					"Firmware status is invalid(%u), try to recorver\n",
+					"Firmware status is invalid(%u)\n",
 					fw_status);
-				regmap_multi_reg_write_bypassed(cs35l41->regmap,
-						cs35l41_dsp_recovery_patch,
-						ARRAY_SIZE(cs35l41_dsp_recovery_patch));
-				mboxcmd = CSPL_MBOX_CMD_RESUME;
 				break;
 			}
 			ret = cs35l41_set_csplmboxcmd(cs35l41, mboxcmd);
@@ -2586,27 +2558,6 @@ int cs35l41_probe(struct cs35l41_private *cs35l41,
 		/* satisfy minimum reset pulse width spec */
 		usleep_range(2000, 2100);
 		gpiod_set_value_cansleep(cs35l41->reset_gpio, 1);
-	}
-
-	cs35l41->spk_sw_gpio = devm_gpiod_get_optional(cs35l41->dev, "spksw",
-							GPIOD_OUT_LOW);
-	if (IS_ERR(cs35l41->spk_sw_gpio)) {
-		ret = PTR_ERR(cs35l41->spk_sw_gpio);
-		cs35l41->spk_sw_gpio = NULL;
-		if (ret == -EBUSY) {
-			dev_info(cs35l41->dev,
-				 "spk_rev_sw line busy, assuming shared reset\n");
-		} else {
-			dev_err(cs35l41->dev,
-				"Failed to get spk_rev_sw GPIO: %d\n", ret);
-			goto err;
-		}
-	}
-	if (cs35l41->spk_sw_gpio) {
-		/* satisfy minimum reset pulse width spec */
-		usleep_range(2000, 2100);
-		dev_info(cs35l41->dev, "set the spk_rev_sw GPIO: 0\n");
-		gpiod_set_value_cansleep(cs35l41->spk_sw_gpio, 0);
 	}
 
 	usleep_range(2000, 2100);
