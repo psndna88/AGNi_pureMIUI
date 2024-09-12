@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -61,6 +61,7 @@
 #include <wlan_reg_ucfg_api.h>
 #include "wlan_lmac_if_def.h"
 #include "wlan_reg_services_api.h"
+#include <wlan_crypto_global_def.h>
 
 /* SME REQ processing function templates */
 static bool __lim_process_sme_sys_ready_ind(struct mac_context *, uint32_t *);
@@ -1198,6 +1199,140 @@ lim_get_vdev_rmf_capable(struct mac_context *mac, struct pe_session *session)
 }
 #endif
 
+/*
+ * lim_rebuild_rsnxe_cap() - Rebuild the RSNXE CAP for STA
+ *
+ * @rsnx_ie: RSNX IE
+ * @length: length of extended RSN cap field
+ *
+ * This API is used to truncate/rebuild the RSNXE based on the length
+ * provided. This length marks the length of the extended RSN cap field.
+ *
+ * Return: Newly constructed RSNX IE
+ */
+static inline uint8_t *lim_rebuild_rsnxe_cap(uint8_t *rsnx_ie, uint8_t length)
+{
+	const uint8_t *rsnxe_cap;
+	uint8_t cap_len;
+	uint8_t *new_rsnxe = NULL;
+
+	if (length < SIR_MAC_RSNX_CAP_MIN_LEN ||
+	    length > SIR_MAC_RSNX_CAP_MAX_LEN) {
+		pe_err("Invalid length %d", length);
+		return NULL;
+	}
+
+	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnx_ie, &cap_len);
+	if (!rsnxe_cap)
+		return NULL;
+
+	new_rsnxe = qdf_mem_malloc(length + 2);
+	if (!new_rsnxe)
+		return NULL;
+
+	new_rsnxe[0] = WLAN_ELEMID_RSNXE;
+	new_rsnxe[1] = length;
+	qdf_mem_copy(&new_rsnxe[2], rsnxe_cap, length);
+
+	/* Now update the new field length in octet 0 for the new length*/
+	new_rsnxe[2] = (new_rsnxe[2] & 0xF0) | (length - 1);
+
+	pe_debug("New RSNXE length %d", length);
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   new_rsnxe, length + 2);
+	return new_rsnxe;
+}
+
+static inline QDF_STATUS
+lim_strip_rsnx_ie(struct mac_context *mac_ctx,
+		  struct pe_session *session)
+{
+	int32_t akm;
+	uint8_t len = 0;
+	uint8_t *rsnxe = NULL, *new_rsnxe = NULL;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t *add_ie = NULL;
+	uint16_t add_ie_len;
+
+	akm = wlan_crypto_get_param(session->vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (akm == -1 ||
+	    !(WLAN_CRYPTO_IS_WPA_WPA2(akm) || WLAN_CRYPTO_IS_WPA3(akm)))
+		return status;
+
+	add_ie = session->lim_join_req->addIEAssoc.addIEdata;
+	add_ie_len = session->lim_join_req->addIEAssoc.length;
+
+	if (!wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RSNXE, add_ie, add_ie_len))
+		return status;
+
+	/*
+	 * Userspace may send RSNXE also in connect request irrespective
+	 * of the connecting AP capabilities. This allows the driver to chose
+	 * best candidate based on score. But the chosen candidate may
+	 * not support the RSNXE feature and may not advertise RSNXE
+	 * in beacon/probe response. Station is not supposed to include
+	 * the RSNX IE in assoc request in such cases as legacy APs
+	 * may misbahave due to the new IE. It's observed that few
+	 * legacy APs which don't support the RSNXE reject the
+	 * connection at EAPOL stage.
+	 *
+	 */
+	rsnxe = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+	if (!rsnxe)
+		return QDF_STATUS_E_FAILURE;
+
+	lim_strip_ie(mac_ctx, add_ie, &add_ie_len, WLAN_ELEMID_RSNXE,
+		     ONE_BYTE, NULL, 0, rsnxe, WLAN_MAX_IE_LEN);
+
+	session->lim_join_req->addIEAssoc.length = add_ie_len;
+
+	if (!rsnxe[0])
+		goto end;
+
+	if (WLAN_CRYPTO_IS_WPA_WPA2(akm)) {
+		mlme_debug("Strip RSNXE as it is not supported by AP");
+		goto end;
+	}
+
+	if (WLAN_CRYPTO_IS_WPA3(akm)) {
+		len = 1;
+		goto rebuild_rsnxe;
+	}
+
+	pe_err("Error in handling RSNXE. RSNXE length : %d", rsnxe[1]);
+	status = QDF_STATUS_E_FAILURE;
+	goto end;
+
+rebuild_rsnxe:
+	/* Build the new RSNXE */
+	new_rsnxe = lim_rebuild_rsnxe_cap(rsnxe, len);
+	if (!new_rsnxe) {
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
+	} else if (!new_rsnxe[1]) {
+		qdf_mem_free(new_rsnxe);
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
+	}
+
+	/* Append the new RSNXE to the assoc ie */
+	if (add_ie_len + new_rsnxe[1] >= SIR_MAC_MAX_ADD_IE_LENGTH) {
+		pe_err("Cannot accomodate the new RSNX IE");
+		status = QDF_STATUS_E_FAILURE;
+		qdf_mem_free(new_rsnxe);
+		goto end;
+	}
+
+	qdf_mem_copy(&add_ie[add_ie_len], new_rsnxe, new_rsnxe[1] + 2);
+	add_ie_len += new_rsnxe[1] + 2;
+	session->lim_join_req->addIEAssoc.length = add_ie_len;
+	qdf_mem_free(new_rsnxe);
+
+end:
+	qdf_mem_free(rsnxe);
+	return status;
+}
+
 /**
  * __lim_process_sme_join_req() - process SME_JOIN_REQ message
  * @mac_ctx: Pointer to Global MAC structure
@@ -1596,6 +1731,13 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 				       status);
 				qdf_mem_zero(mlme_priv->connect_info.ext_cap_ie,
 					     DOT11F_IE_EXTCAP_MAX_LEN + 2);
+				ret_code = eSIR_SME_INVALID_PARAMETERS;
+				goto end;
+			}
+
+			status = lim_strip_rsnx_ie(mac_ctx, session);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pe_err("Error in parsing RSNX IE");
 				ret_code = eSIR_SME_INVALID_PARAMETERS;
 				goto end;
 			}
