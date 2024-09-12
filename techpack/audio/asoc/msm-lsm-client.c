@@ -789,6 +789,13 @@ static int msm_lsm_reg_model(struct snd_pcm_substream *substream,
 			goto err_copy;
 		}
 
+		if ((sm->size - offset) < p_info->param_size) {
+			dev_err(rtd->dev, "%s: user buff size is greater than expected\n",
+				__func__);
+			rc = -EINVAL;
+			goto err_copy;
+		}
+
 		/*
 		 * For set_param, advance the sound model data with the
 		 * number of bytes required by param_data.
