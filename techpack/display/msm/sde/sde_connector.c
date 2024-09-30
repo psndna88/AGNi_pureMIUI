@@ -27,11 +27,9 @@
 /* Autorefresh will occur after FRAME_CNT frames. Large values are unlikely */
 #define AUTOREFRESH_MAX_FRAME_CNT 6
 
-#define SDE_DEBUG_CONN(c, fmt, ...) SDE_DEBUG("conn%d " fmt,\
-		(c) ? (c)->base.base.id : -1, ##__VA_ARGS__)
+#define SDE_DEBUG_CONN(c, fmt, ...)
 
-#define SDE_ERROR_CONN(c, fmt, ...) SDE_ERROR("conn%d " fmt,\
-		(c) ? (c)->base.base.id : -1, ##__VA_ARGS__)
+#define SDE_ERROR_CONN(c, fmt, ...)
 
 static const struct drm_prop_enum_list e_topology_name[] = {
 	{SDE_RM_TOPOLOGY_NONE,	"sde_none"},

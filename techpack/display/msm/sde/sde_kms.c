@@ -968,7 +968,7 @@ static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
 			old_mode = DRM_PANEL_BLANK_POWERDOWN;
 		}
 
-		if (old_mode != new_mode) {
+		if ((old_mode != new_mode) || (old_fps != new_fps)) {
 			struct drm_panel_notifier notifier_data;
 
 			SDE_EVT32(old_mode, new_mode, old_fps, new_fps,
@@ -3779,10 +3779,10 @@ static int _sde_kms_pm_deepsleep_helper(struct sde_kms *sde_kms, bool enter)
 	void *display;
 	struct dsi_display *dsi_display;
 
-	/*Applicable for both deepsleep and hibernation*/
 	if (mem_sleep_current != PM_SUSPEND_MEM)
 		return 0;
 
+	/*Applicable for both deepsleep and hibernation*/
 	SDE_INFO("Deepsleep : enter %d\n", enter);
 
 	for (i = 0; i < sde_kms->dsi_display_count; i++) {
