@@ -289,6 +289,10 @@
 
 #define is_between(val, min, max)	\
 	(((min) <= (max)) && ((min) <= (val)) && ((val) <= (max)))
+#ifdef CONFIG_MMHARDWARE_DETECTION
+static DEFINE_MUTEX(haptic_lock);
+static int dev_cnt = 0;
+#endif
 #define HAP_BOOST_CLAMP_5V_REG_OFFSET(chip)	\
 	((chip)->hbst_revision == HAP_BOOST_V0P0 ? \
 	 HAP_BOOST_V0P0_CLAMP_REG : HAP_BOOST_V0P1_CLAMP_REG)
@@ -4729,6 +4733,23 @@ static int haptics_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(chip->dev, chip);
+#ifdef CONFIG_MMHARDWARE_DETECTION
+	mutex_lock(&haptic_lock);
+	dev_cnt++;
+	mutex_unlock(&haptic_lock);
+
+	dev_err(chip->dev, "%s: dev_cnt %d \n", __func__, dev_cnt);
+	switch (dev_cnt) {
+		case 1:
+			register_kobj_under_mmsysfs(MM_HW_HAPTIC_1, "haptic1");
+			break;
+		case 2:
+			register_kobj_under_mmsysfs(MM_HW_HAPTIC_2, "haptic2");
+			break;
+		default:
+			break;
+	}
+#endif
 	chip->hap_class.name = "qcom-haptics";
 	chip->hap_class.class_groups = hap_class_groups;
 	rc = class_register(&chip->hap_class);
