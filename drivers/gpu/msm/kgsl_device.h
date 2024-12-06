@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2002,2007-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef __KGSL_DEVICE_H
 #define __KGSL_DEVICE_H
@@ -288,7 +289,7 @@ struct kgsl_device {
 	struct kgsl_pwrscale pwrscale;
 
 	int reset_counter; /* Track how many GPU core resets have occurred */
-	struct workqueue_struct *events_wq;
+	struct kthread_worker *events_worker;
 
 	/* Number of active contexts seen globally for this device */
 	int active_context_count;
