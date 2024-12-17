@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -452,8 +452,16 @@ irqret:
 static void gi2c_ev_cb(struct dma_chan *ch, struct msm_gpi_cb const *cb_str,
 		       void *ptr)
 {
-	struct geni_i2c_dev *gi2c = ptr;
-	u32 m_stat = cb_str->status;
+	struct geni_i2c_dev *gi2c;
+	u32 m_stat;
+
+	if (!ptr || !cb_str) {
+		pr_err("%s: Invalid ev_cb buffer\n", __func__);
+		return;
+	}
+
+	gi2c = (struct geni_i2c_dev *)ptr;
+	m_stat = cb_str->status;
 
 	switch (cb_str->cb_event) {
 	case MSM_GPI_QUP_ERROR:

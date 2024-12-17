@@ -2577,7 +2577,7 @@ static void write_namespace_deps_files(void)
 		if (ns_deps_buf.pos == 0)
 			continue;
 
-		sprintf(fname, "%s.ns_deps", mod->name);
+		snprintf(fname, PATH_MAX, "%s.ns_deps", mod->name);
 		write_if_changed(&ns_deps_buf, fname);
 	}
 }
@@ -2689,7 +2689,7 @@ int main(int argc, char **argv)
 		add_moddevtable(&buf, mod);
 		add_srcversion(&buf, mod);
 
-		sprintf(fname, "%s.mod.c", mod->name);
+		snprintf(fname, PATH_MAX, "%s.mod.c", mod->name);
 		write_if_changed(&buf, fname);
 	}
 

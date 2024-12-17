@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.*/
+/* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.*/
 
 #ifndef __EP_PCIE_COM_H
 #define __EP_PCIE_COM_H
@@ -429,6 +430,7 @@ struct ep_pcie_dev_t {
 	struct clk		     *pipe_clk_mux;
 	struct clk		     *pipe_clk_ext_src;
 	struct clk		     *ref_clk_src;
+	u32				tcsr_hot_reset_en_offset;
 };
 
 extern struct ep_pcie_dev_t ep_pcie_dev;
