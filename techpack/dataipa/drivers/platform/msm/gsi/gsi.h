@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef GSI_H
@@ -1609,6 +1610,14 @@ int gsi_poll_channel(unsigned long chan_hdl,
  * @Return gsi_status
  */
 int gsi_config_channel_mode(unsigned long chan_hdl, enum gsi_chan_mode mode);
+
+/**
+ * gsi_status_enabled() - Query GSI Status
+ *
+ * Returns:	true if ENABLED, false on DISABLED
+ *
+ */
+bool gsi_status_enabled(void);
 
 /**
  * gsi_queue_xfer - Peripheral should call this function

@@ -2163,6 +2163,7 @@ struct ipa3_context {
 	struct ipa3_mhip_ctx mhip_ctx;
 	struct ipa3_aqc_ctx aqc_ctx;
 	atomic_t ipa_clk_vote;
+	bool gsi_status;
 
 	int (*client_lock_unlock[IPA_MAX_CLNT])(bool is_lock);
 
@@ -3114,6 +3115,7 @@ struct iommu_domain *ipa3_get_smmu_domain_by_type
 int ipa3_iommu_map(struct iommu_domain *domain, unsigned long iova,
 	phys_addr_t paddr, size_t size, int prot);
 int ipa3_ap_suspend(struct device *dev);
+int ipa3_ap_freeze(struct device *dev);
 int ipa3_ap_resume(struct device *dev);
 int ipa3_init_interrupts(void);
 struct iommu_domain *ipa3_get_smmu_domain(void);
