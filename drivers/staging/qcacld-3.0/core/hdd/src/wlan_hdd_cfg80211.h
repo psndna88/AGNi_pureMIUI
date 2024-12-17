@@ -208,6 +208,20 @@ extern const struct nla_policy wlan_hdd_wisa_cmd_policy[
 #define USE_CFG80211_DEL_STA_V2
 #endif
 
+/*
+ * CFG80211_MULTI_AKM_CONNECT_SUPPORT
+ * used to indicate the Linux kernel contains support for multi AKM connect
+ * support
+ *
+ * This feature was introduced in Linux Kernel 6.0 via:
+ * ecad3b0b99bf wifi: cfg80211: Increase akm_suites array size in
+ * cfg80211_crypto_settings.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0) || \
+	(defined CFG80211_MAX_NUM_AKM_SUITES))
+#define CFG80211_MULTI_AKM_CONNECT_SUPPORT 1
+#endif
+
 #ifdef CFG80211_MULTI_AKM_CONNECT_SUPPORT
 #define WLAN_CM_MAX_CONNECT_AKMS 5
 #endif

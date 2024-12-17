@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -390,6 +391,7 @@ while (0)
 #define FRAME_MASK_IPV4_DHCP  2
 #define FRAME_MASK_IPV4_EAPOL 4
 #define FRAME_MASK_IPV6_DHCP  8
+#define FRAME_MASK_IPV4_WAPI  0x40
 
 #ifdef QCA_SUPPORT_PEER_ISOLATION
 #define dp_get_peer_isolation(_peer) ((_peer)->isolation)

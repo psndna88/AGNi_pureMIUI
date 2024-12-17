@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1082,10 +1082,11 @@ void wlan_hdd_sar_timers_reset(struct hdd_context *hdd_ctx)
 	if (QDF_IS_STATUS_SUCCESS(status))
 		hdd_nofl_debug("sar safety timer started");
 
+	qdf_event_set(&hdd_ctx->sar_safety_req_resp_event);
+
 	qdf_delayed_work_stop_sync(&hdd_ctx->sar_safety_unsolicited_work);
 	hdd_nofl_debug("sar safety unsolicited work stopped");
 
-	qdf_event_set(&hdd_ctx->sar_safety_req_resp_event);
 }
 
 void wlan_hdd_sar_timers_init(struct hdd_context *hdd_ctx)
