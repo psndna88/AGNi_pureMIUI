@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/cdev.h>
@@ -668,8 +669,10 @@ fail:
 static int32_t virt_npu_unmap_buf(struct npu_client *client,
 		 int buf_hdl,  uint64_t iova)
 {
+	struct npu_device *npu_dev = client->npu_dev;
 	struct npu_ion_buf *ion_buf;
 
+	mutex_lock(&npu_dev->lock);
 	/* clear entry and retrieve the corresponding buffer */
 	ion_buf = npu_get_npu_ion_buffer(client, buf_hdl);
 	if (!ion_buf) {
@@ -694,6 +697,7 @@ static int32_t virt_npu_unmap_buf(struct npu_client *client,
 	NPU_DBG("unmapped mem addr:0x%llx size:0x%x\n", ion_buf->iova,
 		ion_buf->size);
 	npu_free_npu_ion_buffer(client, buf_hdl);
+	mutex_unlock(&npu_dev->lock);
 
 	return 0;
 }
@@ -814,6 +818,7 @@ static int32_t virt_npu_map_buf(struct npu_client *client,
 	struct npu_ion_buf *ion_buf = NULL;
 	int rc = 0;
 
+	mutex_lock(&npu_dev->lock);
 	ion_buf = npu_alloc_npu_ion_buffer(client, buf_hdl, size);
 	if (!ion_buf) {
 		NPU_ERR("fail to alloc npu_ion_buffer\n");
@@ -853,6 +858,7 @@ static int32_t virt_npu_map_buf(struct npu_client *client,
 
 	rc = virt_npu_mmap(client, 0, ion_buf->table->sgl,
 		ion_buf->table->nents, size, &ion_buf->iova);
+	mutex_unlock(&npu_dev->lock);
 
 map_end:
 	if (rc)
