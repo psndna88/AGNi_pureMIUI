@@ -1065,9 +1065,10 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		/* Loop through multiple command buffers */
 		for (i = 1; i < csl_packet->num_cmd_buf; i++) {
 			rc = cam_packet_util_validate_cmd_desc(&cmd_desc[i]);
-			if (rc)
+			if (rc) {
+				cam_mem_put_cpu_buf(config.packet_handle);
 				return rc;
-
+			}
 			total_cmd_buf_in_bytes = cmd_desc[i].length;
 			processed_cmd_buf_in_bytes = 0;
 			if (!total_cmd_buf_in_bytes)
@@ -1278,8 +1279,8 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 			rc = fctrl->func_tbl.apply_setting(fctrl, 1);
 			if (rc) {
 				CAM_ERR(CAM_FLASH, "cannot apply fire settings rc = %d", rc);
-				return rc;
 			}
+			cam_mem_put_cpu_buf(config.packet_handle);
 			return rc;
 		}
 		break;
@@ -1344,8 +1345,10 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		goto update_req_mgr;
 	}
 	case CAM_FLASH_PACKET_OPCODE_STREAM_OFF: {
-		if (fctrl->streamoff_count > 0)
+		if (fctrl->streamoff_count > 0) {
+			cam_mem_put_cpu_buf(config.packet_handle);
 			return rc;
+		}
 
 		CAM_DBG(CAM_FLASH, "Received Stream off Settings");
 		i2c_data = &(fctrl->i2c_data);
@@ -1362,6 +1365,7 @@ int cam_flash_i2c_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		if (rc) {
 			CAM_ERR(CAM_FLASH,
 			"Failed in parsing i2c Stream off packets");
+			cam_mem_put_cpu_buf(config.packet_handle);
 			return rc;
 		}
 		break;
@@ -1638,6 +1642,8 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		cmd_buf = (uint32_t *)((uint8_t *)cmd_buf_ptr +
 			cmd_desc->offset);
 		if (!cmd_buf) {
+			cam_mem_put_cpu_buf(cmd_desc->mem_handle);
+			cam_mem_put_cpu_buf(config.packet_handle);
 			rc = -EINVAL;
 			return rc;
 		}
@@ -1654,6 +1660,8 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				CAM_WARN(CAM_FLASH,
 					"Rxed Flash fire ops without linking");
 				flash_data->cmn_attr.is_settings_valid = false;
+				cam_mem_put_cpu_buf(cmd_desc->mem_handle);
+				cam_mem_put_cpu_buf(config.packet_handle);
 				return -EINVAL;
 			}
 			if (remain_len < sizeof(struct cam_flash_set_on_off)) {

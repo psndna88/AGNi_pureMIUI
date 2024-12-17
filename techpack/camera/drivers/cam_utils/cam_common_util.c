@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/string.h>
@@ -72,3 +73,36 @@ void cam_common_util_thread_switch_delay_detect(
 	}
 
 }
+
+int cam_common_mem_kdup(void **dst,
+	void *src, size_t size)
+{
+	gfp_t flag = GFP_KERNEL;
+
+	if (!src || !dst || !size) {
+		CAM_ERR(CAM_UTIL, "Invalid params src: %pK dst: %pK size: %u",
+			src, dst, size);
+		return -EINVAL;
+	}
+
+	if (!in_task())
+		flag = GFP_ATOMIC;
+
+	*dst = kzalloc(size, flag);
+	if (!*dst) {
+		CAM_ERR(CAM_UTIL, "Failed to allocate memory with size: %u", size);
+		return -ENOMEM;
+	}
+
+	memcpy(*dst, src, size);
+	CAM_DBG(CAM_UTIL, "Allocate and copy memory with size: %u", size);
+
+	return 0;
+}
+EXPORT_SYMBOL(cam_common_mem_kdup);
+
+void cam_common_mem_free(void *memory)
+{
+	kfree(memory);
+}
+EXPORT_SYMBOL(cam_common_mem_free);
