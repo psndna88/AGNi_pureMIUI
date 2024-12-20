@@ -150,8 +150,10 @@ int vfs_statx_fd(unsigned int fd, struct kstat *stat,
 }
 EXPORT_SYMBOL(vfs_statx_fd);
 
+#ifdef CONFIG_KSU
 // KernelSU hook
 extern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
+#endif
 
 
 /**
@@ -180,7 +182,9 @@ int vfs_statx(int dfd, const char __user *filename, int flags,
 		       AT_EMPTY_PATH | KSTAT_QUERY_FLAGS)) != 0)
 		return -EINVAL;
 
+#ifdef CONFIG_KSU
 	ksu_handle_stat(&dfd, &filename, &flags);  // call KSU hook first
+#endif
 	if (flags & AT_SYMLINK_NOFOLLOW)
 		lookup_flags &= ~LOOKUP_FOLLOW;
 	if (flags & AT_NO_AUTOMOUNT)
