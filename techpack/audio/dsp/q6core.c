@@ -23,7 +23,7 @@
 #include <soc/snd_event.h>
 #include <ipc/apr.h>
 #include "adsp_err.h"
-#define DEBUG
+
 #define TIMEOUT_MS 1000
 /*
  * AVS bring up in the modem is optimized for the new

@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  * Copyright (c) 2022,2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/module.h>
@@ -3079,7 +3080,6 @@ static const struct snd_kcontrol_new wcd9380_snd_controls[] = {
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum_wcd9380,
 		wcd938x_rx_hph_mode_get, wcd938x_rx_hph_mode_put),
-
 	SOC_ENUM_EXT("TX0 MODE", tx_mode_mux_enum_wcd9380,
 			wcd938x_tx_mode_get, wcd938x_tx_mode_put),
 	SOC_ENUM_EXT("TX1 MODE", tx_mode_mux_enum_wcd9380,

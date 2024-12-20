@@ -12958,6 +12958,7 @@ struct afe_group_device_group_cfg {
 	(AFE_PORT_ID_HSIF2_TDM_RX + 0x100)
 #define AFE_GROUP_DEVICE_ID_HSIF2_TDM_TX \
 	(AFE_PORT_ID_HSIF2_TDM_TX + 0x100)
+
 /* ID of the parameter used by #AFE_MODULE_GROUP_DEVICE to configure the
  * group device. #AFE_SVC_CMD_SET_PARAM can use this parameter ID.
  *

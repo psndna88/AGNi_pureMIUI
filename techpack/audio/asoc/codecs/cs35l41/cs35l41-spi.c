@@ -2,6 +2,7 @@
  * cs35l41-spi.c -- CS35l41 SPI driver
  *
  * Copyright 2017 Cirrus Logic, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Author:	David Rhodes	<david.rhodes@cirrus.com>
  *

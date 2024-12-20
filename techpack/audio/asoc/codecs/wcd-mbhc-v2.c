@@ -1121,6 +1121,7 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 
 	if ((mbhc->current_plug == MBHC_PLUG_TYPE_NONE) &&
 	    detection_type) {
+
 		/* If moisture is present, then enable polling, disable
 		 * moisture detection and wait for interrupt
 		 */
@@ -2075,7 +2076,8 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_component *component,
 	mbhc->is_btn_press = false;
 	mbhc->component = component;
 	mbhc->intr_ids = mbhc_cdc_intr_ids;
-	mbhc->impedance_detect = impedance_det_en;
+//	mbhc->impedance_detect = impedance_det_en;
+	mbhc->impedance_detect = true;
 	mbhc->hphl_swh = hph_swh;
 	mbhc->gnd_swh = gnd_swh;
 	mbhc->micbias_enable = false;

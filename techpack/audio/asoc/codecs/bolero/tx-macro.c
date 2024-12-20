@@ -45,13 +45,11 @@
 #define TX_MACRO_ADC_MODE_CFG0_SHIFT 1
 
 #define TX_MACRO_DMIC_UNMUTE_DELAY_MS	40
-
 #if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
 #define TX_MACRO_AMIC_UNMUTE_DELAY_MS	100
 #else
 #define TX_MACRO_AMIC_UNMUTE_DELAY_MS	200
 #endif
-
 #define TX_MACRO_DMIC_HPF_DELAY_MS	200
 #if defined(CONFIG_TARGET_PRODUCT_VILI) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 #define TX_MACRO_AMIC_HPF_DELAY_MS	200
@@ -3461,8 +3459,8 @@ static int tx_macro_probe(struct platform_device *pdev)
 	if (!tx_priv)
 		return -ENOMEM;
 	platform_set_drvdata(pdev, tx_priv);
-
 	g_tx_priv = tx_priv;
+
 	tx_priv->dev = &pdev->dev;
 	ret = of_property_read_u32(pdev->dev.of_node, "reg",
 				   &tx_base_addr);

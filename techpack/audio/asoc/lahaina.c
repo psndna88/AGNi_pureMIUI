@@ -15,6 +15,7 @@
 #include <linux/input.h>
 #include <linux/of_device.h>
 #include <linux/soc/qcom/fsa4480-i2c.h>
+#include <linux/hwid.h>
 #include <sound/core.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
@@ -107,6 +108,7 @@ enum {
 	TDM_7,
 	TDM_PORT_MAX,
 };
+
 #if defined(CONFIG_TARGET_PRODUCT_REDWOOD)
 #define TDM_MAX_SLOTS 4
 #else

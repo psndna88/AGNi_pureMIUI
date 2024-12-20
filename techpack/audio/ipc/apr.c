@@ -322,6 +322,7 @@ static void apr_adsp_up(void)
 #ifdef CONFIG_MMHARDWARE_DETECTION
 	register_kobj_under_mmsysfs(MM_HW_ADSP, MM_HARDWARE_SYSFS_ADSP_FOLDER);
 #endif
+
 	spin_lock(&apr_priv->apr_lock);
 	if (apr_priv->is_initial_boot)
 		schedule_work(&apr_priv->add_chld_dev_work);

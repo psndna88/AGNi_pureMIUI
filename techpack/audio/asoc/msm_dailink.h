@@ -1027,7 +1027,7 @@ SND_SOC_DAILINK_DEFS(display_port1,
 	DAILINK_COMP_ARRAY(COMP_CODEC("msm-ext-disp-audio-codec-rx",
 			"msm_dp_audio_codec_rx1_dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
-	
+
 #if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
 SND_SOC_DAILINK_DEFS(pri_mi2s_rx,
        DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-mi2s.0")),

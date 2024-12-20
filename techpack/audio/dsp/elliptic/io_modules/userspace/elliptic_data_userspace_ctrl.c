@@ -1,5 +1,6 @@
 /**
  * Copyright Elliptic Labs
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  */
 

@@ -1,5 +1,6 @@
 /**
 * Copyright MI
+* Copyright (C) 2021 XiaoMi, Inc.
 *
 */
 /* #define DEBUG */

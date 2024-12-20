@@ -37,7 +37,6 @@
 #ifdef CONFIG_MSM_CSPL
 #include <dsp/msm-cirrus-playback.h>
 #endif
-
 #ifdef CONFIG_SND_SOC_TFA9874_FOR_DAVI
 #if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
 #include "../asoc/codecs/tfa9874/inc/tfa_platform_interface_definition.h"
@@ -1249,6 +1248,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		uint32_t *payload = data->payload;
 		uint32_t param_id;
 		uint32_t param_id_pos = 0;
+
 #if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN) || defined(CONFIG_TARGET_PRODUCT_TAOYAO) || defined(CONFIG_TARGET_PRODUCT_REDWOOD)
 #else
 #ifdef CONFIG_MSM_CSPL
@@ -3640,14 +3640,13 @@ static int afe_send_port_topology_id(u16 port_id)
 	if (ret < 0 && q6afe_is_afe_lsm_port(port_id)) {
 		pr_debug("%s: Check for LSM topology\n", __func__);
 		ret = afe_get_cal_topology_id(port_id, &topology_id,
-					      AFE_LSM_TOPOLOGY_CAL);
+						AFE_LSM_TOPOLOGY_CAL);
 	}
 	if (ret || !topology_id) {
 		pr_debug("%s: AFE port[%d] get_cal_topology[%d] invalid!\n",
 				__func__, port_id, topology_id);
 		goto done;
 	}
-
 	param_info.module_id = AFE_MODULE_AUDIO_DEV_INTERFACE;
 	param_info.instance_id = INSTANCE_ID_0;
 	param_info.param_id = AFE_PARAM_ID_SET_TOPOLOGY;

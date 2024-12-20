@@ -2,7 +2,6 @@
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/device.h>
@@ -24,7 +23,6 @@
 #ifdef TFA_NON_DSP_SOLUTION
 #if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
 #include "codecs/tfa9874/inc/tfa_platform_interface_definition.h"
-
 #endif
 #endif
 
@@ -6175,6 +6173,7 @@ static int msm_dai_q6_mi2s_hw_params(struct snd_pcm_substream *substream,
 	}
 #endif
 #endif
+
 	dai_data->channels = params_channels(params);
 	switch (dai_data->channels) {
 	case 15:
@@ -7220,7 +7219,6 @@ static int msm_dai_q6_mi2s_dev_probe(struct platform_device *pdev)
 			"qcom,msm-mi2s-lines");
 		goto free_pdata;
 	}
-
 	mi2s_pdata->sd_lines = mi2s_intf_line;
 	mi2s_pdata->intf_id = mi2s_intf;
 

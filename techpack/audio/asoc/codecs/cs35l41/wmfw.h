@@ -2,6 +2,7 @@
  * wmfw.h - Wolfson firmware format information
  *
  * Copyright 2012 Wolfson Microelectronics plc
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
  *
