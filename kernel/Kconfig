@@ -1,6 +1,6 @@
-menu "KernelSU"
+menu "KernelSU-NEXT"
 
-config KSU
+config KSU_NEXT
 	tristate "KernelSU function support"
 	depends on OVERLAY_FS
 	default y
@@ -11,14 +11,14 @@ config KSU
 
 config KSU_DEBUG
 	bool "KernelSU debug mode"
-	depends on KSU
+	depends on KSU_NEXT
 	default n
 	help
 	  Enable KernelSU debug mode.
 
 config KSU_ALLOWLIST_WORKAROUND
         bool "KernelSU Session Keyring Init workaround"
-        depends on KSU
+        depends on KSU_NEXT
         default n
         help
           Enable session keyring init workaround for problematic devices.
