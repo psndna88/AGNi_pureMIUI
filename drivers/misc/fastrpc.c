@@ -710,8 +710,12 @@ static u64 fastrpc_get_payload_size(struct fastrpc_invoke_ctx *ctx, int metalen)
 
 		if (ctx->args[i].fd == 0 || ctx->args[i].fd == -1) {
 
-			if (ctx->olaps[oix].offset == 0)
+			if (ctx->olaps[oix].offset == 0) {
+				/* Check for overflow before align. */
+				if (size > (ULLONG_MAX - (FASTRPC_ALIGN - 1)))
+					return 0;
 				size = ALIGN(size, FASTRPC_ALIGN);
+			}
 
 			size += (ctx->olaps[oix].mend - ctx->olaps[oix].mstart);
 		}
