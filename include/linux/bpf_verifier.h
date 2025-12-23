@@ -7,6 +7,7 @@
 #include <linux/bpf.h> /* for enum bpf_reg_type */
 #include <linux/filter.h> /* for MAX_BPF_STACK */
 #include <linux/tnum.h>
+#include <linux/android_kabi.h>
 
 /* Maximum variable offset umax_value permitted when resolving memory accesses.
  * In practice this is far bigger than any realistic pointer offset; this limit
@@ -347,7 +348,7 @@ struct bpf_insn_aux_data {
 	};
 	u64 map_key_state; /* constant (32 bit) key tracking for maps */
 	int ctx_field_size; /* the ctx field size for load insn, maybe 0 */
-	u32 seen; /* this insn was processed by the verifier */
+	u32 seen; /* this insn was processed by the verifier at env->pass_cnt */
 	bool sanitize_stack_spill; /* subject to Spectre v4 sanitation */
 	bool zext_dst; /* this insn zero extends dst reg */
 	u8 alu_state; /* used in combination with alu_limit */
@@ -405,6 +406,8 @@ struct bpf_subprog_info {
 	bool has_tail_call;
 	bool tail_call_reachable;
 	bool has_ld_abs;
+
+	ANDROID_KABI_RESERVE(1);
 };
 
 /* single container for all structs
@@ -462,6 +465,9 @@ struct bpf_verifier_env {
 	u32 peak_states;
 	/* longest register parentage chain walked for liveness marking */
 	u32 longest_mark_read_walk;
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
 };
 
 __printf(2, 0) void bpf_verifier_vlog(struct bpf_verifier_log *log,
