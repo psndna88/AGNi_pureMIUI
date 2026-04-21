@@ -235,6 +235,11 @@ void susfs_show_version(void __user **user_info);
 
 void susfs_start_sdcard_monitor_fn(void);
 
+/* try_umount */
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+void susfs_try_umount(uid_t uid);
+#endif
+
 /* susfs_init */
 void susfs_init(void);
 

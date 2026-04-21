@@ -21,6 +21,8 @@
 #include <linux/fsnotify_backend.h>
 #include <linux/jump_label.h>
 #include <linux/version.h> // We need check kernel version.
+#include <linux/task_work.h>
+#include <linux/rwsem.h>
 #include <linux/susfs.h>
 #include "fuse/fuse_i.h"
 #include "mount.h"
@@ -1472,6 +1474,61 @@ void susfs_start_sdcard_monitor_fn(void) {
 			static_branch_disable(&susfs_set_sdcard_android_data_decrypted_key_false);
 	}
 }
+
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+struct mount_entry {
+	char *umountable;
+	unsigned int flags;
+	struct list_head list;
+};
+extern struct list_head mount_list;
+extern struct rw_semaphore mount_list_lock;
+extern void try_umount(const char *mnt, int flags);
+extern struct cred *ksu_cred;
+
+struct susfs_umount_tw {
+	struct callback_head cb;
+};
+
+static void susfs_umount_tw_func(struct callback_head *cb)
+{
+	struct susfs_umount_tw *tw = container_of(cb, struct susfs_umount_tw, cb);
+	const struct cred *saved;
+	struct mount_entry *entry;
+
+	if (!ksu_cred) {
+		kfree(tw);
+		return;
+	}
+
+	saved = override_creds(ksu_cred);
+	down_read(&mount_list_lock);
+	list_for_each_entry(entry, &mount_list, list) {
+		try_umount(entry->umountable, entry->flags);
+	}
+	up_read(&mount_list_lock);
+	revert_creds(saved);
+	kfree(tw);
+}
+
+void susfs_try_umount(uid_t uid)
+{
+	struct susfs_umount_tw *tw;
+
+	if (!ksu_cred)
+		return;
+
+	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
+	if (!tw)
+		return;
+
+	tw->cb.func = susfs_umount_tw_func;
+	if (task_work_add(current, &tw->cb, TWA_RESUME)) {
+		kfree(tw);
+		pr_warn("susfs: susfs_try_umount task_work_add failed\n");
+	}
+}
+#endif // #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 
 /* susfs_init */
 void susfs_init(void) {
