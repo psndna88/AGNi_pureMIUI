@@ -23,6 +23,9 @@
 #include <linux/version.h> // We need check kernel version.
 #include <linux/task_work.h>
 #include <linux/rwsem.h>
+#ifndef TWA_RESUME
+#define TWA_RESUME true
+#endif
 #include <linux/susfs.h>
 #include "fuse/fuse_i.h"
 #include "mount.h"
