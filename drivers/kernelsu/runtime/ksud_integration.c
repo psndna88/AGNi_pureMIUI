@@ -430,6 +430,21 @@ static bool is_init_rc(struct file *fp)
     return true;
 }
 
+void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr)
+{
+	if (likely(!ksu_vfs_read_hook))
+		return;
+
+	struct file *file = fget((unsigned int)fd);
+	if (!file)
+		return;
+
+	if (is_init_rc(file))
+		*kstat_size_ptr += (loff_t)ksu_rc_len;
+
+	fput(file);
+}
+
 static void ksu_apply_init_rc_proxy(struct file *file)
 {
     // we only process the first read
