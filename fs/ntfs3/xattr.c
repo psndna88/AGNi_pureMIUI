@@ -1017,7 +1017,7 @@ void ntfs_get_wsl_perm(struct inode *inode)
 			sizeof(value[2]), &sz) == sizeof(value[2])) {
 		i_uid_write(inode, (uid_t)le32_to_cpu(value[0]));
 		i_gid_write(inode, (gid_t)le32_to_cpu(value[1]));
-		inode->i_mode = le32_to_cpu(value[2]);
+		inode->i_mode = le32_to_cpu(value[2]) & ~(S_ISUID | S_ISGID);
 
 		if (ntfs_get_ea(inode, "$LXDEV", sizeof("$$LXDEV") - 1,
 				&value[0], sizeof(value),
