@@ -1,33 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2018 HUAWEI, Inc.
- *             http://www.huawei.com/
- * Created by Gao Xiang <gaoxiang25@huawei.com>
+ *             https://www.huawei.com/
  */
 #include "internal.h"
 #include <linux/pagevec.h>
 
-struct page *erofs_allocpage(struct page **pagepool, gfp_t gfp)
+struct page *erofs_allocpage(struct list_head *pool, gfp_t gfp)
 {
-	struct page *page = *pagepool;
+	struct page *page;
 
-	if (page) {
+	if (!list_empty(pool)) {
+		page = lru_to_page(pool);
 		DBG_BUGON(page_ref_count(page) != 1);
-		*pagepool = (struct page *)page_private(page);
+		list_del(&page->lru);
 	} else {
 		page = alloc_page(gfp);
 	}
 	return page;
-}
-
-void erofs_release_pages(struct page **pagepool)
-{
-	while (*pagepool) {
-		struct page *page = *pagepool;
-
-		*pagepool = (struct page *)page_private(page);
-		put_page(page);
-	}
 }
 
 #ifdef CONFIG_EROFS_FS_ZIP
@@ -291,4 +281,3 @@ void erofs_exit_shrinker(void)
 	unregister_shrinker(&erofs_shrinker_info);
 }
 #endif	/* !CONFIG_EROFS_FS_ZIP */
-
