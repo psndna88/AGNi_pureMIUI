@@ -15,7 +15,6 @@
 #include <linux/rbtree.h>
 #include <linux/seq_file.h>
 #include <linux/vmalloc.h>
-#include <linux/rekernel.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/list_lru.h>
@@ -379,52 +378,7 @@ static bool debug_low_async_space_locked(struct binder_alloc *alloc, int pid)
 	return false;
 }
 
-static static inline bool line_is_frozen(struct task_struct *task)
-{
-	return frozen(task) || freezing(task);
-}
-
-static int send_netlink_message(char *msg, uint16_t len) {
-    struct sk_buff *skbuffer;
-    struct nlmsghdr *nlhdr;
-
-    skbuffer = nlmsg_new(len, GFP_ATOMIC);
-    if (!skbuffer) {
-        printk("netlink alloc failure.\n");
-        return -1;
-    }
-
-    nlhdr = nlmsg_put(skbuffer, 0, 0, rekernel_netlink_unit, len, 0);
-    if (!nlhdr) {
-        printk("nlmsg_put failaure.\n");
-        nlmsg_free(skbuffer);
-        return -1;
-    }
-
-    memcpy(nlmsg_data(nlhdr), msg, len);
-    return netlink_unicast(rekernel_netlink, skbuffer, REKERNEL_USER_PORT, MSG_DONTWAIT);
-}
-
-static int start_rekernel_server(void) {
-  extern struct net init_net;
-  struct netlink_kernel_cfg rekernel_cfg = { 
-    .input = NULL,
-  };
-  if (rekernel_netlink != NULL)
-    return 0;
-  for (rekernel_netlink_unit = NETLINK_REKERNEL_MIN; rekernel_netlink_unit < NETLINK_REKERNEL_MAX; rekernel_netlink_unit++) {
-    rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, rekernel_netlink_unit, &rekernel_cfg);
-    if (rekernel_netlink != NULL)
-      break;
-  }
-  printk("Created Re:Kernel server! NETLINK UNIT: %d\n", rekernel_netlink_unit);
-  if (rekernel_netlink == NULL) {
-    printk("Failed to create Re:Kernel server!\n");
-    return -1;
-  }
-  return 0;
-}
-struct binder_buffer *binder_alloc_new_buf_locked(
+static struct binder_buffer *binder_alloc_new_buf_locked(
 				struct binder_alloc *alloc,
 				size_t data_size,
 				size_t offsets_size,
@@ -432,7 +386,6 @@ struct binder_buffer *binder_alloc_new_buf_locked(
 				int is_async,
 				int pid)
 {
-	struct task_struct *proc_task = NULL;
 	struct rb_node *n = alloc->free_buffers.rb_node;
 	struct binder_buffer *buffer;
 	size_t buffer_size;
@@ -464,21 +417,6 @@ struct binder_buffer *binder_alloc_new_buf_locked(
 				"%d: got transaction with invalid extra_buffers_size %zd\n",
 				alloc->pid, extra_buffers_size);
 		return ERR_PTR(-EINVAL);
-	}
-
-	if (is_async
-		&& (alloc->free_async_space < 3 * (size + sizeof(struct binder_buffer))
-		|| (alloc->free_async_space < REKERNEL_WARN_AHEAD_SPACE))) {
-		rcu_read_lock();
-		proc_task = find_task_by_vpid(alloc->pid);
-		rcu_read_unlock();
-		if (proc_task != NULL && start_rekernel_server() == 0) {
-			if (line_is_frozen(proc_task)) {
-     			char binder_kmsg[REKERNEL_PACKET_SIZE];
-                snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, proc_task->pid, task_uid(proc_task).val);
-         		send_netlink_message(binder_kmsg, strlen(binder_kmsg));
-			}
-		}
 	}
 
 	/* Pad 0-size buffers so they get assigned unique addresses */

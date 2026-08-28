@@ -14,7 +14,6 @@
 #include <linux/slab.h>
 #include <linux/export.h>
 #include <linux/init.h>
-#include <linux/rekernel.h>
 #include <linux/sched/mm.h>
 #include <linux/sched/user.h>
 #include <linux/sched/debug.h>
@@ -1283,65 +1282,11 @@ __group_send_sig_info(int sig, struct kernel_siginfo *info, struct task_struct *
 	return send_signal(sig, info, p, PIDTYPE_TGID);
 }
 
-static inline bool line_is_frozen(struct task_struct *task)
-{
-	return frozen(task) || freezing(task);
-}
-
-static int send_netlink_message(char *msg, uint16_t len) {
-    struct sk_buff *skbuffer;
-    struct nlmsghdr *nlhdr;
-
-    skbuffer = nlmsg_new(len, GFP_ATOMIC);
-    if (!skbuffer) {
-        printk("netlink alloc failure.\n");
-        return -1;
-    }
-
-    nlhdr = nlmsg_put(skbuffer, 0, 0, rekernel_netlink_unit, len, 0);
-    if (!nlhdr) {
-        printk("nlmsg_put failaure.\n");
-        nlmsg_free(skbuffer);
-        return -1;
-    }
-
-    memcpy(nlmsg_data(nlhdr), msg, len);
-    return netlink_unicast(rekernel_netlink, skbuffer, REKERNEL_USER_PORT, MSG_DONTWAIT);
-}
-
-static int start_rekernel_server(void) {
-  extern struct net init_net;
-  struct netlink_kernel_cfg rekernel_cfg = {
-    .input = NULL,
-  };
-  if (rekernel_netlink != NULL)
-    return 0;
-  for (rekernel_netlink_unit = NETLINK_REKERNEL_MIN; rekernel_netlink_unit < NETLINK_REKERNEL_MAX; rekernel_netlink_unit++) {
-    rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, rekernel_netlink_unit, &rekernel_cfg);
-    if (rekernel_netlink != NULL)
-      break;
-  }
-  printk("Created Re:Kernel server! NETLINK UNIT: %d\n", rekernel_netlink_unit);
-  if (rekernel_netlink == NULL) {
-    printk("Failed to create Re:Kernel server!\n");
-    return -1;
-  }
-  return 0;
-}
-
 int do_send_sig_info(int sig, struct kernel_siginfo *info, struct task_struct *p,
 			enum pid_type type)
 {
 	unsigned long flags;
 	int ret = -ESRCH;
-
-	if (start_rekernel_server() == 0) {
- 		if (line_is_frozen(p) && (sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT)) {
-     		char binder_kmsg[REKERNEL_PACKET_SIZE];
-     		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer=%d,dst=%d;", sig, task_uid(p).val, task_uid(current).val);
-     		send_netlink_message(binder_kmsg, strlen(binder_kmsg));
- 		}
- 	}
 
 	if (lock_task_sighand(p, &flags)) {
 		ret = send_signal(sig, info, p, type);
