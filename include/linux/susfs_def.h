@@ -46,6 +46,7 @@
 /*
  * inode->i_state => storing flag 'INODE_STATE_'
  * mount->mnt.susfs_mnt_id_backup => storing original mnt_id of normal mounts or custom sus mnt_id of sus mounts
+ * task_struct->susfs_last_fake_mnt_id => storing last valid fake mnt_id
  * task_struct->susfs_task_state => storing flag 'TASK_STRUCT_'
  */
 
