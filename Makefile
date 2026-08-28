@@ -408,7 +408,7 @@ HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
 HOSTCC	= $(CCACHE) clang
 HOSTCXX	= $(CCACHE) clang++
-KBUILD_HOSTCFLAGS   := -Wmissing-prototypes -Wstrict-prototypes -Ofast \
+KBUILD_HOSTCFLAGS   := -Wmissing-prototypes -Wstrict-prototypes \
 		-fomit-frame-pointer -Wno-visibility -std=gnu89 -pipe -Wno-deprecated-declarations $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
 KBUILD_HOSTCXXFLAGS := -Ofast $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS) -flto=$(BUILDJOBS)
