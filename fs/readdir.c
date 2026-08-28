@@ -21,9 +21,6 @@
 #include <linux/unistd.h>
 #include <linux/compat.h>
 #include <linux/uaccess.h>
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-#include <linux/susfs_def.h>
-#endif
 
 #include <asm/unaligned.h>
 
@@ -39,9 +36,6 @@
 	unsafe_copy_to_user(dst, src, len, label);		\
 } while (0)
 
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-extern int susfs_sus_ino_for_filldir64(unsigned long ino);
-#endif
 
 int iterate_dir(struct file *file, struct dir_context *ctx)
 {
@@ -235,11 +229,6 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
 		sizeof(long));
 	int prev_reclen;
 
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
-		return 0;
-	}
-#endif
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return buf->error;
@@ -330,11 +319,6 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
 		sizeof(u64));
 	int prev_reclen;
 
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
-		return 0;
-	}
-#endif
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return buf->error;
@@ -436,11 +420,6 @@ static int compat_fillonedir(struct dir_context *ctx, const char *name,
 
 	if (buf->result)
 		return -EINVAL;
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
-		return 0;
-	}
-#endif
 	buf->result = verify_dirent_name(name, namlen);
 	if (buf->result < 0)
 		return buf->result;
@@ -516,11 +495,6 @@ static int compat_filldir(struct dir_context *ctx, const char *name, int namlen,
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return -EINVAL;
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
-		return 0;
-	}
-#endif
 	d_ino = ino;
 	if (sizeof(d_ino) < sizeof(ino) && d_ino != ino) {
 		buf->error = -EOVERFLOW;
