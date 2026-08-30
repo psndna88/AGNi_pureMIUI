@@ -148,3 +148,4 @@ x509.genkey
 # generated defconfigs
 arch/*/configs/vendor/*_defconfig
 
+/KernelSU-Next
