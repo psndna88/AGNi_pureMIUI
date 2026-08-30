@@ -154,3 +154,4 @@ arch/arm/boot/dts/vendor
 #
 Android.bp
 /KernelSU-Next
+/KernelSU

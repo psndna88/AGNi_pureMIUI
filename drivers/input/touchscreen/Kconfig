@@ -1345,11 +1345,11 @@ source "drivers/input/touchscreen/fts_spi/Kconfig"
 
 source "drivers/input/touchscreen/fts_dual/Kconfig"
 
-source "drivers/input/touchscreen/gt9916/Kconfig"
+#source "drivers/input/touchscreen/gt9916/Kconfig"
 
-source "drivers/input/touchscreen/gt9897t/Kconfig"
+#source "drivers/input/touchscreen/gt9897t/Kconfig"
 
-source "drivers/input/touchscreen/synaptics_s3908p/Kconfig"
+#source "drivers/input/touchscreen/synaptics_s3908p/Kconfig"
 
 source "drivers/input/touchscreen/xiaomi/Kconfig"
 
