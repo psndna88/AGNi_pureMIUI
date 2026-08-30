@@ -293,7 +293,7 @@ static FORCE_INLINE int LZ4HC_encodeSequence(
 		*token = (BYTE)(length<<ML_BITS);
 
 	/* Copy Literals */
-	LZ4_wildCopy(*op, *anchor, (*op) + length);
+	LZ4_wildCopy8(*op, *anchor, (*op) + length);
 	*op += length;
 
 	/* Encode Offset */
@@ -570,7 +570,7 @@ _Search3:
 			*op++ = (BYTE) lastRun;
 		} else
 			*op++ = (BYTE)(lastRun<<ML_BITS);
-		LZ4_memcpy(op, anchor, iend - anchor);
+		memcpy(op, anchor, iend - anchor);
 		op += iend - anchor;
 	}
 
