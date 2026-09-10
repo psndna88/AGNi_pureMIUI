@@ -1,0 +1,50 @@
+name: Build AgNi Kernel HyperOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libelf-dev clang llvm libssl-dev zip unace unrar zip unzip p7zip-full p7zip-rar sharutils rar uudeview mpack arj cabextract file-roller liblz4-tool u-boot-tools
+
+      - name: Download Toolchain (Proton Clang)
+        run: |
+          git clone https://github.com/kdrag0n/proton-clang --depth=1 clang
+
+      - name: Compile AgNi Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export PATH=$(pwd)/clang/bin:$PATH
+          
+          mkdir -p out
+          
+          make O=out ARCH=arm64 vendor/miatoll-perf_defconfig
+          
+          make -j$(nproc) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-android- \
+            CROSS_COMPILE_ARM32=arm-linux-androideabi-
+
+      - name: Pack AnyKernel3 Zip
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3 --depth=1 AnyKernel3
+          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cd AnyKernel3
+          zip -r9 ../AgNi-HyperOS-2.5GHz-miatoll.zip * -x .git README.md
+
+      - name: Upload Kernel Zip Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: AgNi-HyperOS-2.5GHz-miatoll
+          path: AgNi-HyperOS-2.5GHz-miatoll.zip
